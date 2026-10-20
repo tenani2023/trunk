@@ -1,0 +1,28 @@
+---
+/**
+ * 予約導線。外部予約URLが設定されているときだけ外部へ遷移し、
+ * 未設定のときは内部の予約案内（/reserve）へ。
+ */
+import { reserveHref, reserveIsExternal } from '@/data/site';
+
+interface Props {
+  class?: string;
+  label?: string;
+  /** 'btn' | 'link' | 'plain' */
+  variant?: 'btn' | 'btn-ghost' | 'link' | 'plain';
+  id?: string;
+}
+const { class: className = '', label = '予約する', variant = 'btn', id } = Astro.props;
+const cls = variant === 'btn' ? 'btn' : variant === 'btn-ghost' ? 'btn btn--ghost' : variant === 'link' ? 'link' : '';
+---
+
+<a
+  id={id}
+  href={reserveHref}
+  class:list={[cls, className]}
+  target={reserveIsExternal ? '_blank' : undefined}
+  rel={reserveIsExternal ? 'noopener' : undefined}
+  data-reserve-link
+>
+  {label}{variant === 'link' && <span class="arrow" aria-hidden="true">→</span>}
+</a>

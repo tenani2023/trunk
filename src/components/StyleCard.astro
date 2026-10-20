@@ -1,0 +1,46 @@
+---
+import Photo from './Photo.astro';
+import type { StyleItem } from '@/data/styles';
+import { getStaff } from '@/data/staff';
+
+interface Props {
+  style: StyleItem;
+  sizes?: string;
+  /** 見出しレベル */
+  heading?: 'h3' | 'h2';
+  loading?: 'lazy' | 'eager';
+  index?: number;
+}
+const { style, sizes = '(min-width: 900px) 30vw, 50vw', heading: Tag = 'h3', loading = 'lazy', index = 0 } = Astro.props;
+const owner = style.staffId ? getStaff(style.staffId) : undefined;
+---
+
+<article class="style-card" data-reveal style={`--reveal-delay:${(index % 3) * 0.08}s`}>
+  <a href={owner ? `/staff/${owner.id}` : '/styles'} class="style-card__media" tabindex="-1" aria-hidden="true">
+    <Photo id={style.image} sizes={sizes} loading={loading} />
+  </a>
+  <div class="style-card__body">
+    <p class="label">{style.category}</p>
+    <Tag class="style-card__name h-jp">{style.name}</Tag>
+    <p class="style-card__desc small muted">{style.description}</p>
+    {owner && (
+      <p class="style-card__owner small">
+        <a href={`/staff/${owner.id}`} class="style-card__owner-link">{owner.name}</a>
+      </p>
+    )}
+  </div>
+</article>
+
+<style>
+  .style-card { display: flex; flex-direction: column; gap: 12px; }
+  .style-card__media { display: block; }
+  .style-card__body { display: flex; flex-direction: column; gap: 4px; }
+  .style-card__name { font-size: 0.9375rem; }
+  .style-card__desc { display: none; }
+  .style-card__owner-link { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line-strong); }
+  .style-card__owner-link:hover { text-decoration-color: currentColor; }
+  @media (min-width: 600px) {
+    .style-card__desc { display: block; }
+    .style-card__name { font-size: 1rem; }
+  }
+</style>

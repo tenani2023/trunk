@@ -1,0 +1,175 @@
+---
+/**
+ * メニュー・料金。誌面の価格表として組む:
+ *   見出しと写真 → 番号付きの目次 → カテゴリごとに「大きな英字 + 写真」を左に留め、右に点線のリーダー付き価格表。
+ *   行はスクロールで順に現れる。数字はセリフ体で大きく。
+ */
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Photo from '@/components/Photo.astro';
+import ReserveLink from '@/components/ReserveLink.astro';
+import type { MediaKey } from '@/data/media';
+import { menu, menuNotes, formatPrice } from '@/data/menu';
+
+/** カテゴリに添える写真（media.ts のキー）。差し替えはここだけ */
+const catPhoto: Record<string, MediaKey> = {
+  cut: 'styleShortLayer',
+  color: 'styleColor',
+  perm: 'stylePerm',
+  treatment: 'conceptHair',
+  other: 'salonProducts',
+};
+const pad = (n: number) => String(n).padStart(2, '0');
+---
+
+<BaseLayout title="メニュー・料金" description="TRUNKのメニューと料金。カット、カラー、パーマ、縮毛矯正、トリートメント。すべて税込表示。（仮料金）">
+  <section class="head">
+    <div class="wrap head__grid">
+      <div class="head__text">
+        <p class="label" data-reveal>Price list — すべて税込</p>
+        <h1 class="display head__title" data-reveal>Menu</h1>
+        <p class="head__lead" data-reveal>「〜」の付いた価格は、髪の長さ・量・状態で変わります。施術の前に、カウンセリングで金額をお伝えします。</p>
+        <ol class="toc" data-reveal aria-label="カテゴリ">
+          {menu.map((c, i) => (
+            <li>
+              <a href={`#${c.id}`} class="toc__link">
+                <span class="toc__no num">{pad(i + 1)}</span>
+                <span class="toc__en display">{c.en}</span>
+                <span class="toc__jp small muted">{c.label}</span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </div>
+      <figure class="head__fig" data-reveal style="--reveal-delay:.15s">
+        <Photo id="salonDetail" sizes="(min-width: 900px) 38vw, 100vw" loading="eager" fetchpriority="high" />
+      </figure>
+    </div>
+  </section>
+
+  {menu.map((c, ci) => (
+    <section class="cat" id={c.id} aria-labelledby={`${c.id}-title`}>
+      <div class="wrap cat__grid">
+        <div class="cat__side">
+          <p class="label cat__no" data-reveal><span class="num">{pad(ci + 1)}</span> / {pad(menu.length)}</p>
+          <h2 class="display cat__en" id={`${c.id}-title`} data-reveal>{c.en}</h2>
+          <p class="h-jp cat__jp" data-reveal>{c.label}</p>
+          {c.lead && <p class="small muted cat__lead" data-reveal>{c.lead}</p>}
+          {catPhoto[c.id] && (
+            <figure class="cat__fig" data-reveal style="--reveal-delay:.1s">
+              <Photo id={catPhoto[c.id]} sizes="(min-width: 900px) 18vw, 40vw" />
+            </figure>
+          )}
+        </div>
+        <dl class="price">
+          {c.items.map((i, ii) => (
+            <div class="price__row" data-reveal style={`--reveal-delay:${Math.min(ii, 5) * 0.06}s`}>
+              <dt class="price__name">
+                <span class="price__label">{i.name}</span>
+                {(i.minutes || i.note) && (
+                  <span class="price__sub small muted">
+                    {i.minutes && <span><span class="num">{i.minutes}</span> min</span>}
+                    {i.note && <span>{i.note}</span>}
+                  </span>
+                )}
+              </dt>
+              <dd class="price__value"><span class="num">{formatPrice(i)}</span></dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </section>
+  ))}
+
+  <section class="notes section--tight">
+    <div class="wrap notes__grid">
+      <div class="notes__head" data-reveal><p class="label">Notes</p><p class="h-jp">ご案内</p></div>
+      <ul class="notes__list small" data-reveal>
+        {menuNotes.map((n) => <li>{n}</li>)}
+      </ul>
+    </div>
+  </section>
+
+  <section class="section--tight cta">
+    <div class="wrap cta__inner" data-reveal>
+      <div>
+        <p class="label">Reservation</p>
+        <p class="cta__title display">Not sure? <em>Start with a cut.</em></p>
+        <p class="small muted">メニューに迷ったら「カット」でご予約ください。当日、髪を見てからご提案します。</p>
+      </div>
+      <ReserveLink variant="btn" label="予約する" />
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  /* ---------- head ---------- */
+  .head { padding-top: clamp(24px, 4vw, 56px); padding-bottom: clamp(40px, 6vw, 80px); }
+  .head__grid { display: grid; grid-template-columns: 1fr; row-gap: 28px; }
+  .head__text { display: flex; flex-direction: column; gap: 14px; }
+  .head__title { font-size: clamp(4.5rem, 20vw, 12rem); line-height: 0.85; letter-spacing: -0.02em; margin-left: -0.04em; }
+  .head__lead { max-width: 32em; }
+  .head__fig { margin-inline: calc(var(--gutter) * -1); }
+  .head__fig :global(.photo) { --ratio: 16 / 10; }
+  .toc { display: flex; flex-direction: column; margin-top: 12px; border-top: 1px solid var(--line); }
+  .toc__link { display: grid; grid-template-columns: 2.5rem auto 1fr; align-items: baseline; gap: 12px; min-height: 52px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .toc__no { font-size: 0.9375rem; color: var(--ink-3); }
+  .toc__en { font-size: 1.75rem; line-height: 1; white-space: nowrap; }
+  .toc__jp { text-align: right; white-space: nowrap; }
+  .toc__link:hover .toc__en { font-style: italic; }
+
+  /* ---------- categories ---------- */
+  .cat { border-top: 1px solid var(--line); padding-block: clamp(36px, 6vw, 80px); }
+  .cat__grid { display: grid; grid-template-columns: 1fr; row-gap: 24px; }
+  .cat__side { display: grid; grid-template-columns: 1fr auto; column-gap: 20px; row-gap: 4px; align-items: start; }
+  .cat__no { grid-column: 1; }
+  .cat__en { grid-column: 1; font-size: clamp(3rem, 12vw, 5.5rem); line-height: 0.9; letter-spacing: -0.02em; margin-left: -0.03em; }
+  .cat__jp { grid-column: 1; margin-top: 6px; }
+  .cat__lead { grid-column: 1 / -1; max-width: 30em; margin-top: 10px; }
+  .cat__fig { grid-column: 2; grid-row: 1 / span 3; width: clamp(96px, 30vw, 150px); }
+  .cat__en, .cat__jp { white-space: nowrap; }
+  .cat__fig :global(.photo) { --ratio: 3 / 4; }
+
+  .price { display: flex; flex-direction: column; }
+  .price__row { display: flex; align-items: baseline; gap: 12px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+  .price__row:first-child { border-top: 1px solid var(--line); }
+  .price__name { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .price__label { font-size: 1.0625rem; font-weight: 500; letter-spacing: 0.02em; }
+  .price__sub { display: flex; gap: 12px; flex-wrap: wrap; }
+  .price__sub .num { font-size: 1.1em; }
+  /* dotted leader between the name and the price */
+  .price__row::after { content: ''; flex: 1; order: 1; border-bottom: 1px dotted var(--line-strong); transform: translateY(-0.35em); min-width: 24px; }
+  .price__value { order: 2; white-space: nowrap; }
+  .price__value .num { font-size: 1.625rem; }
+
+  /* ---------- notes / cta ---------- */
+  .notes { border-top: 1px solid var(--line); }
+  .notes__grid { display: grid; grid-template-columns: 1fr; row-gap: 12px; }
+  .notes__list { display: flex; flex-direction: column; gap: 8px; max-width: 40em; }
+  .notes__list li { padding-left: 1.2em; text-indent: -1.2em; }
+  .notes__list li::before { content: '※'; margin-right: 0.4em; color: var(--ink-3); }
+  .cta { border-top: 1px solid var(--line); }
+  .cta__inner { display: flex; flex-direction: column; gap: 20px; align-items: flex-start; }
+  .cta__title { font-size: clamp(2rem, 7vw, 3.75rem); margin: 6px 0 10px; }
+
+  @media (min-width: 900px) {
+    .head__grid { grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: clamp(12px, 2vw, 32px); align-items: end; }
+    .head__text { grid-column: 1 / span 6; }
+    .head__fig { grid-column: 8 / -1; margin-inline: 0; margin-bottom: 8px; }
+    .head__fig :global(.photo) { --ratio: 4 / 5; }
+    .toc__en { font-size: 2rem; }
+
+    .cat__grid { grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: clamp(12px, 2vw, 32px); row-gap: 0; align-items: start; }
+    .cat__side { grid-column: 1 / span 4; grid-template-columns: 1fr; position: sticky; top: calc(var(--header-h) + 24px); }
+    .cat__en { font-size: clamp(3.5rem, 6vw, 6rem); }
+    .cat__fig { grid-column: 1; grid-row: auto; width: clamp(140px, 13vw, 200px); margin-top: 24px; }
+    .price { grid-column: 6 / -1; }
+    .price__row { padding: 22px 0; gap: 16px; }
+    .price__label { font-size: 1.125rem; }
+    .price__value .num { font-size: 1.875rem; }
+
+    .notes__grid { grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: clamp(12px, 2vw, 32px); }
+    .notes__head { grid-column: 1 / span 4; }
+    .notes__list { grid-column: 6 / -1; }
+    .cta__inner { flex-direction: row; justify-content: space-between; align-items: flex-end; }
+  }
+</style>

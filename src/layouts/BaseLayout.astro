@@ -1,0 +1,118 @@
+---
+import '@/styles/fonts.css';
+import '@/styles/global.css';
+import serifWoff2 from '@fontsource/instrument-serif/files/instrument-serif-latin-400-normal.woff2?url';
+import serifItalicWoff2 from '@fontsource/instrument-serif/files/instrument-serif-latin-400-italic.woff2?url';
+import { notoSubsetUrl, notoFontFace } from '@/data/fonts.generated';
+import type { ImageMetadata } from 'astro';
+import { getImage } from 'astro:assets';
+
+import Header from '@/components/Header.astro';
+import Footer from '@/components/Footer.astro';
+import { brand, isDemo } from '@/data/site';
+
+interface Props {
+  title?: string;
+  description?: string;
+  /** このページだけ noindex にする（デモ事例が残っているページなど）。isDemo とは独立 */
+  noindex?: boolean;
+  /** OGP 画像（src/assets の画像）。絶対URLが必要なので astro.config の `site` 設定後に出力される */
+  ogImage?: ImageMetadata;
+  ogType?: 'website' | 'article';
+}
+const { title, description = brand.description, noindex = false, ogImage, ogType = 'website' } = Astro.props;
+const fullTitle = title ? `${title} | ${brand.name}` : `${brand.name} — ${brand.kind}｜${brand.tagline}`;
+const canonical = Astro.site ? new URL(Astro.url.pathname, Astro.site).href : null;
+const og = ogImage && Astro.site ? await getImage({ src: ogImage, width: 1200, height: 630, fit: 'cover', format: 'jpg', quality: 80 }) : null;
+---
+
+<!doctype html>
+<html lang="ja" class="no-js">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    {/* デモ中は検索エンジンに載せない。productionBlockers が空になるまで外れない。 */}
+    {(isDemo || noindex) && <meta name="robots" content="noindex, nofollow" />}
+    {canonical && <link rel="canonical" href={canonical} />}
+    <meta property="og:site_name" content={brand.name} />
+    <meta property="og:locale" content="ja_JP" />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    {canonical && <meta property="og:url" content={canonical} />}
+    {og && <meta property="og:image" content={new URL(og.src, Astro.site).href} />}
+    {og && <meta property="og:image:width" content="1200" />}
+    {og && <meta property="og:image:height" content="630" />}
+    <meta name="twitter:card" content={og ? 'summary_large_image' : 'summary'} />
+    <meta name="theme-color" content="#f4f2ed" />
+    <meta name="color-scheme" content="light" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    {/* 見出し書体だけ先読み（小さい）。日本語本文は font-display: optional で段階適用。 */}
+    <link rel="preload" as="font" type="font/woff2" href={serifWoff2} crossorigin />
+    <link rel="preload" as="font" type="font/woff2" href={serifItalicWoff2} crossorigin />
+    {/* 日本語本文フォント（サイトの文字だけの1ファイル・サブセット、約310KB、font-display: optional）
+        - 初回訪問: @font-face を宣言せず、システムの日本語書体で描画。最初の操作または load+3秒後に低優先度で取得してキャッシュし、印を残す。
+        - 再訪問（印あり）: 描画前に @font-face を宣言 → キャッシュから即適用（optional なのでレイアウトシフトなし。
+          キャッシュが消えていればそのページはシステム書体のまま）。
+        理由: @font-face をCSSに置くと Chrome は optional でも描画時に VeryHigh で取得を開始し、Slow 4G 相当で
+        ヒーロー画像と帯域を奪い合って LCP が 2.5s→4.1s に悪化した（docs/review/r2/R2_REPORT.md）。 */}
+    {notoSubsetUrl && notoFontFace && (
+      <script is:inline define:vars={{ notoSubsetUrl, notoFontFace }}>
+        (function () {
+          var KEY = 'trunk-font-cached';
+          var cached = false;
+          try { cached = localStorage.getItem(KEY) === notoSubsetUrl; } catch (e) {}
+          if (cached) {
+            var st = document.createElement('style'); st.textContent = notoFontFace; document.head.appendChild(st);
+            return;
+          }
+          // 取得は「最初の操作」か「load から 3 秒後」の早い方。LCP より前に帯域を使わない。
+          var done = false;
+          var warm = function () {
+            if (done) return; done = true;
+            fetch(notoSubsetUrl, { mode: 'cors', credentials: 'omit', priority: 'low' })
+              .then(function (r) { if (r.ok) { try { localStorage.setItem(KEY, notoSubsetUrl); } catch (e) {} } })
+              .catch(function () {});
+          };
+          ['scroll', 'pointerdown', 'keydown', 'touchstart'].forEach(function (ev) { addEventListener(ev, warm, { once: true, passive: true }); });
+          addEventListener('load', function () { setTimeout(warm, 3000); });
+        })();
+      </script>
+    )}
+    <slot name="head" />
+    <script is:inline>document.documentElement.classList.replace('no-js', 'js');</script>
+  </head>
+  <body>
+    <a href="#main" class="skip-link">本文へ移動</a>
+    <Header />
+    <main id="main" tabindex="-1">
+      <slot />
+    </main>
+    <Footer />
+
+    <script>
+      // Scroll reveal — small, once, disabled under reduced motion (CSS handles the fallback).
+      const els = document.querySelectorAll<HTMLElement>('[data-reveal]');
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduce || !('IntersectionObserver' in window)) {
+        els.forEach((el) => el.classList.add('is-in'));
+      } else {
+        const io = new IntersectionObserver(
+          (entries) => {
+            for (const e of entries) {
+              if (e.isIntersecting) { (e.target as HTMLElement).classList.add('is-in'); io.unobserve(e.target); }
+            }
+          },
+          { rootMargin: '0px 0px -8% 0px', threshold: 0.05 },
+        );
+        els.forEach((el) => {
+          const r = el.getBoundingClientRect();
+          if (r.top < window.innerHeight * 0.92) el.classList.add('is-in'); // above the fold: show immediately
+          else io.observe(el);
+        });
+      }
+    </script>
+  </body>
+</html>

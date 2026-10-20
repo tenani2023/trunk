@@ -1,0 +1,235 @@
+---
+import Logo from './Logo.astro';
+import ReserveLink from './ReserveLink.astro';
+import { nav, showDemoNotes } from '@/data/site';
+
+const path = Astro.url.pathname.replace(/\/$/, '') || '/';
+const isActive = (href: string) => path === href || path.startsWith(href + '/');
+---
+
+<header class="header" data-header>
+  <div class="header__inner wrap">
+    <a href="/" class="header__logo" aria-label="TRUNK トップページ">
+      <Logo size="1.5rem" />
+      {showDemoNotes && <span class="demo-tag header__demo" title="デモサイト：店舗情報・料金・写真は仮のものです">DEMO</span>}
+    </a>
+
+    <nav class="header__nav" aria-label="メイン">
+      <ul class="header__list">
+        {nav.map((item) => (
+          <li>
+            <a href={item.href} class:list={['header__link', isActive(item.href) && 'is-active']} aria-current={isActive(item.href) ? 'page' : undefined}>
+              {item.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+
+    <div class="header__actions">
+      <ReserveLink variant="btn" class="header__reserve" label="予約する" />
+      <a href="#footer-nav" class="menu-btn" data-menu-open aria-controls="site-menu" aria-expanded="false">
+        <span class="menu-btn__icon" aria-hidden="true"><i></i><i></i></span>
+        <span class="menu-btn__text">Menu</span>
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- 全画面メニュー（JS有効時のみ表示。JS無効時は menu-btn がフッターナビへ移動する） -->
+<div class="menu" id="site-menu" hidden data-menu aria-hidden="true">
+  <div class="menu__panel" role="dialog" aria-modal="true" aria-label="メニュー" tabindex="-1" data-menu-panel>
+    <div class="menu__top wrap">
+      <a href="/" class="menu__logo" aria-label="TRUNK トップページ"><Logo size="1.5rem" /></a>
+      <button type="button" class="menu-btn menu-btn--close" data-menu-close>
+        <span class="menu-btn__icon is-x" aria-hidden="true"><i></i><i></i></span>
+        <span class="menu-btn__text">Close</span>
+      </button>
+    </div>
+    <nav class="menu__nav wrap" aria-label="全画面メニュー">
+      <ol class="menu__list">
+        <li><a href="/" class="menu__link"><span class="menu__en display">Top</span><span class="menu__jp">トップ</span></a></li>
+        {nav.map((item) => (
+          <li>
+            <a href={item.href} class="menu__link" aria-current={isActive(item.href) ? 'page' : undefined}>
+              <span class="menu__en display">{item.en}</span>
+              <span class="menu__jp">{item.label}</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+      <div class="menu__foot">
+        <ReserveLink variant="btn" label="予約する" class="menu__reserve" />
+        {showDemoNotes && <p class="small menu__demo">デモサイト：店舗情報・料金・写真はすべて仮のものです。予約は送信されません。</p>}
+      </div>
+    </nav>
+  </div>
+</div>
+
+<style>
+  .header {
+    position: sticky; top: 0; z-index: 50;
+    height: var(--header-h);
+    background: color-mix(in srgb, var(--paper) 92%, transparent);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.3s var(--ease);
+  }
+  .header.is-scrolled { border-bottom-color: var(--line); }
+  .header__inner {
+    height: 100%;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  }
+  .header__logo { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; }
+  .header__demo { transform: translateY(-1px); }
+
+  .header__nav { display: none; }
+  .header__list { display: flex; gap: clamp(20px, 2.2vw, 36px); }
+  .header__link {
+    display: inline-flex; align-items: center; min-height: 44px;
+    font-size: 0.875rem; letter-spacing: 0.04em; font-weight: 500;
+    position: relative;
+  }
+  .header__link::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: 8px; height: 1px;
+    background: currentColor; transform: scaleX(0); transform-origin: left;
+    transition: transform 0.3s var(--ease);
+  }
+  .header__link:hover::after, .header__link.is-active::after { transform: scaleX(1); }
+
+  .header__actions { display: flex; align-items: center; gap: 8px; }
+  :global(.header__reserve) { display: none; min-height: 44px; padding-inline: 20px; }
+
+  .menu-btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    min-width: 44px; min-height: 44px; padding: 0 4px 0 8px;
+    font-size: 0.75rem; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 500;
+  }
+  .menu-btn__icon { width: 22px; height: 14px; position: relative; display: block; }
+  .menu-btn__icon i {
+    position: absolute; left: 0; right: 0; height: 1.5px; background: currentColor;
+    transition: transform 0.3s var(--ease), top 0.3s var(--ease);
+  }
+  .menu-btn__icon i:first-child { top: 2px; }
+  .menu-btn__icon i:last-child { top: 11px; }
+  .menu-btn__icon.is-x i { top: 6.5px; }
+  .menu-btn__icon.is-x i:first-child { transform: rotate(45deg); }
+  .menu-btn__icon.is-x i:last-child { transform: rotate(-45deg); }
+
+  @media (min-width: 900px) {
+    .header__nav { display: block; }
+    :global(.header__reserve) { display: inline-flex; }
+    .menu-btn { display: none; }
+  }
+
+  /* --- full screen menu --- */
+  .menu {
+    position: fixed; inset: 0; z-index: 100;
+    background: var(--ink); color: var(--on-ink);
+  }
+  .menu__panel { height: 100%; overflow-y: auto; display: flex; flex-direction: column; }
+  .menu__top {
+    height: var(--header-h);
+    display: flex; align-items: center; justify-content: space-between;
+    flex: none;
+  }
+  .menu__nav { flex: 1; display: flex; flex-direction: column; justify-content: space-between; padding-block: 24px 32px; gap: 32px; }
+  .menu__list { display: flex; flex-direction: column; }
+  .menu__link {
+    display: flex; align-items: baseline; gap: 16px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line-on-ink);
+    min-height: 56px;
+  }
+  .menu__en { font-size: clamp(2.5rem, 11vw, 4rem); line-height: 1; letter-spacing: -0.01em; }
+  .menu__jp { font-size: 0.8125rem; color: var(--on-ink-2); letter-spacing: 0.04em; }
+  .menu__link[aria-current='page'] .menu__en { font-style: italic; }
+  .menu__foot { display: flex; flex-direction: column; gap: 16px; }
+  :global(.menu__reserve) { background: var(--paper); color: var(--ink); border-color: var(--paper); align-self: flex-start; min-width: 200px; }
+  :global(.menu__reserve:hover) { background: transparent; color: var(--paper); }
+  .menu__demo { color: var(--on-ink-2); max-width: 40em; }
+  .menu :global(:focus-visible) { outline-color: var(--paper); }
+
+  .js .menu { opacity: 0; transition: opacity 0.35s var(--ease); }
+  .js .menu.is-open { opacity: 1; }
+  .js .menu.is-open .menu__link { animation: menu-in 0.6s var(--ease) both; }
+  .js .menu.is-open .menu__link:nth-child(2) { animation-delay: 0.04s; }
+  @keyframes menu-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .js .menu, .js .menu.is-open .menu__link { transition: none; animation: none; }
+  }
+</style>
+
+<script>
+  // Header: shadow line on scroll + full screen menu (open / close / Esc / focus trap / restore)
+  const header = document.querySelector<HTMLElement>('[data-header]');
+  const menu = document.querySelector<HTMLElement>('[data-menu]');
+  const panel = menu?.querySelector<HTMLElement>('[data-menu-panel]');
+  const openBtn = document.querySelector<HTMLAnchorElement>('[data-menu-open]');
+  const closeBtn = menu?.querySelector<HTMLButtonElement>('[data-menu-close]');
+
+  const onScroll = () => header?.classList.toggle('is-scrolled', window.scrollY > 8);
+  onScroll();
+  window.addEventListener('scroll', onScroll, { passive: true });
+
+  if (menu && panel && openBtn && closeBtn) {
+    let lastFocus: HTMLElement | null = null;
+    let closeTimer = 0;
+
+    const focusables = () =>
+      Array.from(panel.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'));
+
+    const open = () => {
+      lastFocus = document.activeElement as HTMLElement;
+      window.clearTimeout(closeTimer);
+      menu.hidden = false;
+      menu.setAttribute('aria-hidden', 'false');
+      openBtn.setAttribute('aria-expanded', 'true');
+      document.documentElement.style.overflow = 'hidden';
+      // 背後のページを inert に（Tab や支援技術がメニューの外へ出ないように）
+      Array.from(document.body.children).forEach((el) => { if (el !== menu) (el as HTMLElement).inert = true; });
+      requestAnimationFrame(() => {
+        menu.classList.add('is-open');
+        closeBtn.focus();
+      });
+      document.addEventListener('keydown', onKey);
+    };
+
+    const close = (restore = true) => {
+      menu.classList.remove('is-open');
+      menu.setAttribute('aria-hidden', 'true');
+      openBtn.setAttribute('aria-expanded', 'false');
+      document.documentElement.style.overflow = '';
+      Array.from(document.body.children).forEach((el) => { (el as HTMLElement).inert = false; });
+      document.removeEventListener('keydown', onKey);
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      closeTimer = window.setTimeout(() => { menu.hidden = true; }, reduce ? 0 : 350);
+      // Safari はクリックしたリンクにフォーカスを置かないため、その場合は開くボタンへ戻す
+      if (restore) {
+        const target = lastFocus && lastFocus !== document.body && document.contains(lastFocus) ? lastFocus : openBtn;
+        target.focus();
+      }
+    };
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+      if (e.key !== 'Tab') return;
+      const items = focusables();
+      if (!items.length) return;
+      const first = items[0]!, last = items[items.length - 1]!;
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+
+    openBtn.addEventListener('click', (e) => { e.preventDefault(); open(); });
+    closeBtn.addEventListener('click', () => close());
+    // 同一ページ内リンクで閉じる
+    panel.querySelectorAll('a[href]').forEach((a) => a.addEventListener('click', () => close(false)));
+    // PC幅になったら閉じる
+    const mq = window.matchMedia('(min-width: 900px)');
+    mq.addEventListener('change', (e) => { if (e.matches && !menu.hidden) close(false); });
+    // bfcache 復帰時の整合
+    window.addEventListener('pageshow', () => { if (!menu.hidden) close(false); });
+  }
+</script>

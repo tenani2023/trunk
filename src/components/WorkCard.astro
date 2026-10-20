@@ -1,0 +1,164 @@
+---
+/**
+ * 事例カード。写真は切らずに 3:4 のまま、横に「Before」のタブ（グレー地に Before 写真を薄く重ねる）を添える。
+ *   - タブを押す: 写真が Before にクロスフェードし、右側に墨色の「After」タブ（After 写真を薄く重ねる）が出る。もう一度押すと戻る
+ *   - 写真本体: 詳細ページへのリンク。After の写真はヒーローへモーフ（view-transition-name）
+ *   - 通し番号は写真の上の紙の部分に置く（写真には重ねない）
+ * Before が無い事例はタブ無しの普通のフレーム。
+ */
+import { Picture } from 'astro:assets';
+import type { Work } from '@/lib/works';
+import { formatWorkDate, isoDate, workMinutes, workPrice } from '@/lib/works';
+import { getWorkCategory, workPath } from '@/data/works';
+import { getStaff } from '@/data/staff';
+import { formatPrice } from '@/data/menu';
+
+interface Props {
+  work: Work;
+  sizes?: string;
+  heading?: 'h2' | 'h3';
+  loading?: 'lazy' | 'eager';
+  index?: number;
+}
+const { work, sizes = '(min-width: 900px) 30vw, 50vw', heading: Tag = 'h3', loading = 'lazy', index = 0 } = Astro.props;
+const { data } = work;
+const cat = getWorkCategory(data.category);
+const owner = data.staffId ? getStaff(data.staffId) : undefined;
+const href = workPath(work.id);
+const minutes = workMinutes(work);
+const price = workPrice(work);
+const pair = !!data.before;
+---
+
+<article class="work-card" data-reveal style={`--reveal-delay:${(index % 3) * 0.08}s`}>
+  <div class="work-card__media">
+    <a href={href} class="work-card__frame-link" tabindex="-1" aria-hidden="true">
+      <div class:list={['frame', pair && 'frame--pair']} data-frame>
+        {data.before && (
+          <span class="frame__tab frame__tab--before">
+            <span class="frame__tab-img"><Picture src={data.before} alt="" widths={[160, 240]} sizes="60px" formats={['avif', 'webp']} fallbackFormat="jpg" quality={60} loading="lazy" layout="none" /></span>
+            <span class="frame__tab-text">Before</span>
+          </span>
+        )}
+        <div class="frame__photos">
+          {data.before && (
+            <div class="photo frame__before">
+              <Picture src={data.before} alt="" widths={[360, 540, 720, 960]} sizes={sizes} formats={['avif', 'webp']} fallbackFormat="jpg" quality={72} loading="lazy" layout="none" />
+            </div>
+          )}
+          <div class="photo frame__after" style={`view-transition-name: work-${work.id}`}>
+            <Picture
+              src={data.after}
+              alt={data.afterAlt}
+              widths={[360, 540, 720, 960, 1280]}
+              sizes={sizes}
+              formats={['avif', 'webp']}
+              fallbackFormat="jpg"
+              quality={78}
+              loading={loading}
+              decoding={loading === 'eager' ? 'sync' : 'async'}
+              layout="none"
+            />
+          </div>
+        </div>
+        {pair && (
+          <span class="frame__tab frame__tab--after">
+            <span class="frame__tab-img"><Picture src={data.after} alt="" widths={[160, 240]} sizes="60px" formats={['avif', 'webp']} fallbackFormat="jpg" quality={60} loading="lazy" layout="none" /></span>
+            <span class="frame__tab-text">After</span>
+          </span>
+        )}
+      </div>
+    </a>
+    {/* タブを押すと入れ替わる（Before が主役、右に After のタブ）。もう一度押すと戻る。写真本体は詳細へのリンクのまま */}
+    {pair && <button type="button" class="frame__flip" data-flip aria-pressed="false" aria-label={`${data.title} のビフォーを見る`} title="ビフォーを見る"></button>}
+  </div>
+  <div class="work-card__body">
+    <p class="label work-card__spec">
+      <span>{cat.en}</span>
+      {minutes && <span><span class="num">{minutes}</span> min</span>}
+      {price && <span class="num">{formatPrice(price)}</span>}
+    </p>
+    <Tag class="work-card__name h-jp"><a href={href} class="work-card__link">{data.title}</a></Tag>
+    <p class="work-card__meta small">
+      <time datetime={isoDate(data.date)} class="work-card__date">{formatWorkDate(data.date)}</time>
+      {owner && <span class="work-card__owner">{owner.name}</span>}
+    </p>
+  </div>
+</article>
+
+<style>
+  .work-card { display: flex; flex-direction: column; gap: 10px; }
+  .work-card__media { position: relative; }
+  .work-card__frame-link { display: block; position: relative; }
+
+  /* Frame = colour tab (with the other photo ghosted inside) + uncropped 3:4 photo. */
+  .frame { --tab: 44px; display: flex; align-items: stretch; }
+  .frame__photos { flex: 1 1 auto; position: relative; aspect-ratio: 3 / 4; background: var(--paper-2); overflow: hidden; }
+  .frame__photos :global(.photo) { position: absolute; inset: 0; aspect-ratio: auto; transition: opacity 0.6s var(--ease); }
+  .frame__before { opacity: 0; }
+  .frame__tab {
+    flex: 0 0 var(--tab); position: relative; overflow: hidden;
+    background: var(--paper-2); color: var(--ink);
+    transition: background 0.3s var(--ease);
+  }
+  .frame__tab-img { position: absolute; inset: 0; opacity: 0.3; filter: saturate(0.6); transition: opacity 0.3s var(--ease); }
+  .frame__tab-img :global(picture), .frame__tab-img :global(img) { width: 100%; height: 100%; object-fit: cover; }
+  .frame__tab-text {
+    position: absolute; left: 0; right: 0; bottom: 14px;
+    display: flex; justify-content: center;
+    writing-mode: vertical-rl; transform: rotate(180deg);
+    font-size: 0.625rem; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; line-height: 1;
+  }
+  .frame__tab--after { display: none; background: var(--ink); color: var(--on-ink); }
+  .frame__tab--after .frame__tab-img { opacity: 0.38; }
+  @media (hover: hover) {
+    .work-card:hover .frame__tab--before { background: var(--ink); color: var(--on-ink); }
+    .work-card:hover .frame__tab--before .frame__tab-img { opacity: 0.38; }
+  }
+  /* flipped: Before is the photo, the After tab sits on the right */
+  .frame--pair.is-flipped .frame__before { opacity: 1; }
+  .frame--pair.is-flipped .frame__after { opacity: 0; }
+  .frame--pair.is-flipped .frame__tab--before { display: none; }
+  .frame--pair.is-flipped .frame__tab--after { display: block; }
+  /* the tap target covers the tab */
+  .frame__flip {
+    position: absolute; top: 0; bottom: 0; left: 0; z-index: 4;
+    width: max(var(--tab, 44px), 44px); cursor: pointer; background: transparent;
+  }
+  .frame__flip[aria-pressed='true'] { left: auto; right: 0; }
+  .frame__flip:focus-visible { outline-offset: -3px; }
+  :global(.no-js) .frame__flip { display: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .frame__photos :global(.photo), .frame__tab, .frame__tab-img { transition: none; }
+  }
+
+  .work-card__body { display: flex; flex-direction: column; gap: 5px; }
+  .work-card__spec { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 6px; margin-top: 2px; }
+  .work-card__spec > span + span::before { content: '·'; margin-right: 6px; color: var(--ink-3); }
+  .work-card__spec .num { font-size: 1.1em; text-transform: none; letter-spacing: 0; }
+  .work-card__name { font-size: 0.9375rem; }
+  .work-card__link:hover { text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--line-strong); }
+  .work-card__meta { display: flex; gap: 12px; color: var(--ink-2); }
+  .work-card__date { font-family: var(--font-display); font-size: 1rem; letter-spacing: 0.02em; color: var(--ink-3); }
+  :global(.on-ink) .work-card__meta { color: var(--on-ink-2); }
+  @media (min-width: 600px) {
+    .frame { --tab: 52px; }
+    .work-card__name { font-size: 1.0625rem; }
+  }
+</style>
+
+<script>
+  // Tab → flip the frame (Before main, After tab on the right). Click again to flip back.
+  document.querySelectorAll<HTMLButtonElement>('[data-flip]').forEach((btn) => {
+    const frame = btn.parentElement?.querySelector<HTMLElement>('[data-frame]');
+    if (!frame) return;
+    const base = btn.getAttribute('aria-label')?.replace(/ のビフォーを見る$/, '') ?? '';
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const on = frame.classList.toggle('is-flipped');
+      btn.setAttribute('aria-pressed', String(on));
+      btn.setAttribute('aria-label', on ? `${base} のアフターに戻す` : `${base} のビフォーを見る`);
+      btn.title = on ? 'アフターに戻す' : 'ビフォーを見る';
+    });
+  });
+</script>

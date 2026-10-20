@@ -1,0 +1,30 @@
+---
+/**
+ * /works（1ページ目）, /works/2 … 施術事例の一覧。
+ */
+import type { GetStaticPaths } from 'astro';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import WorksList from '@/components/WorksList.astro';
+import { getWorks } from '@/lib/works';
+import { workCategories, WORKS_PER_PAGE } from '@/data/works';
+import { brand, area } from '@/data/site';
+
+export const getStaticPaths = (async ({ paginate }) => {
+  const works = await getWorks();
+  return paginate(works, { pageSize: WORKS_PER_PAGE });
+}) satisfies GetStaticPaths;
+
+const { page } = Astro.props;
+const all = await getWorks();
+const counts = Object.fromEntries(workCategories.map((c) => [c.id, all.filter((w) => w.data.category === c.id).length]));
+const suffix = page.currentPage > 1 ? `（${page.currentPage}ページ目）` : '';
+const title = `施術事例${suffix}｜${area.cityShort}・${area.region}の${brand.kind}`;
+const description = `${area.pref}${area.city}の${brand.kind} ${brand.name} の施術事例一覧${suffix}。カット・カラー・パーマ・縮毛矯正・キッズカットのビフォーアフターと、担当スタイリストの施術のポイントを掲載。${area.nearby.join('・')}からも。`;
+const first = page.data[0];
+---
+
+<BaseLayout title={title} description={description} noindex={all.some((w) => w.data.isDemo)} ogImage={first?.data.after}>
+  {page.url.prev && <link slot="head" rel="prev" href={page.url.prev} />}
+  {page.url.next && <link slot="head" rel="next" href={page.url.next} />}
+  <WorksList page={page} counts={counts} totalCount={all.length} />
+</BaseLayout>

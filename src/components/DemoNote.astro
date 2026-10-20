@@ -1,0 +1,26 @@
+---
+/**
+ * 写真・人物・料金などの近くに置く、短いデモ注記。
+ */
+interface Props {
+  text: string;
+  class?: string;
+}
+import { showDemoNotes } from '@/data/site';
+const { text, class: className = '' } = Astro.props;
+---
+
+{showDemoNotes && <p class:list={['demo-note', className]}>
+  <span class="demo-tag">DEMO</span>
+  <span>{text}</span>
+</p>}
+
+<style>
+  .demo-note {
+    display: flex; align-items: flex-start; gap: 8px;
+    font-size: 0.7812rem; line-height: 1.6;
+    color: var(--ink-2);
+  }
+  .demo-note .demo-tag { margin-top: 3px; flex: none; }
+  :global(.on-ink) .demo-note { color: var(--on-ink-2); }
+</style>

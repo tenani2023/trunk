@@ -1,0 +1,37 @@
+---
+/**
+ * /works/category/cut, /works/category/cut/2 … カテゴリ別の事例一覧。
+ * 「草津 カット」のような地名＋施術名の検索の受け皿になるページ。1カテゴリ = 1ランディングページ。
+ */
+import type { GetStaticPaths } from 'astro';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import WorksList from '@/components/WorksList.astro';
+import { getWorks } from '@/lib/works';
+import { workCategories, getWorkCategory, WORKS_PER_PAGE, type WorkCategoryId } from '@/data/works';
+import { brand, area } from '@/data/site';
+
+export const getStaticPaths = (async ({ paginate }) => {
+  const works = await getWorks();
+  return workCategories.flatMap((c) =>
+    paginate(
+      works.filter((w) => w.data.category === c.id),
+      { params: { category: c.id }, pageSize: WORKS_PER_PAGE },
+    ),
+  );
+}) satisfies GetStaticPaths;
+
+const { page } = Astro.props;
+const category = getWorkCategory(Astro.params.category as WorkCategoryId);
+const all = await getWorks();
+const counts = Object.fromEntries(workCategories.map((c) => [c.id, all.filter((w) => w.data.category === c.id).length]));
+const suffix = page.currentPage > 1 ? `（${page.currentPage}ページ目）` : '';
+const title = `${area.cityShort}で${category.label}なら｜${category.label}の施術事例${suffix}`;
+const description = `${category.description} ${area.nearby.join('・')}からも。（${brand.name}）`;
+const first = page.data[0];
+---
+
+<BaseLayout title={title} description={description} noindex={page.data.some((w) => w.data.isDemo)} ogImage={first?.data.after}>
+  {page.url.prev && <link slot="head" rel="prev" href={page.url.prev} />}
+  {page.url.next && <link slot="head" rel="next" href={page.url.next} />}
+  <WorksList page={page} category={category} counts={counts} totalCount={all.length} />
+</BaseLayout>

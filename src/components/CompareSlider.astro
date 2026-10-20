@@ -1,0 +1,127 @@
+---
+/**
+ * 事例詳細のビフォーアフター比較。1 枚のフレームに Before（下）と After（上、clip-path）を重ね、
+ * 1 本の細い線を左右に動かして比較する。
+ *   - ポインタ: フレーム上のドラッグ／クリック（縦スクロールは妨げない: touch-action: pan-y）
+ *   - キーボード／支援技術: 透明な range 入力（下端の帯）
+ *   - JS 無効: 50 / 50 で静止
+ * After の写真は一覧カードと同じ view-transition-name を持ち、ページ遷移でモーフする。
+ */
+import { Picture } from 'astro:assets';
+import type { Work } from '@/lib/works';
+
+interface Props {
+  work: Work;
+  class?: string;
+}
+const { work, class: className = '' } = Astro.props;
+const { data } = work;
+const pair = !!data.before;
+---
+
+<div class:list={['cmp', pair && 'cmp--pair', className]} style="--pos:50%" data-compare>
+  {data.before && (
+    <div class="photo cmp__before">
+      <Picture src={data.before} alt={data.beforeAlt ?? ''} widths={[480, 720, 960, 1280]} sizes="(min-width: 900px) 56vw, 100vw" formats={['avif', 'webp']} fallbackFormat="jpg" quality={76} loading="eager" layout="none" />
+    </div>
+  )}
+  <div class="photo cmp__after" style={`view-transition-name: work-${work.id}`}>
+    <Picture
+      src={data.after}
+      alt={data.afterAlt}
+      widths={[480, 720, 960, 1280, 1600]}
+      sizes="(min-width: 900px) 56vw, 100vw"
+      formats={['avif', 'webp']}
+      fallbackFormat="jpg"
+      quality={78}
+      loading="eager"
+      decoding="sync"
+      fetchpriority="high"
+      layout="none"
+    />
+  </div>
+  {pair && (
+    <>
+      <span class="cmp__tag cmp__tag--b" aria-hidden="true">Before</span>
+      <span class="cmp__tag cmp__tag--a" aria-hidden="true">After</span>
+      <div class="cmp__line" aria-hidden="true"><span class="cmp__knob"><i>‹</i><i>›</i></span></div>
+      <input type="range" class="cmp__range" min="0" max="100" value="50" step="1" aria-label="ビフォーとアフターの境界。左右に動かして比較する" />
+    </>
+  )}
+</div>
+
+<style>
+  .cmp {
+    position: relative; overflow: hidden;
+    aspect-ratio: 3 / 4; background: var(--paper-2);
+    touch-action: pan-y; user-select: none; -webkit-user-select: none;
+  }
+  .cmp :global(.photo) { position: absolute; inset: 0; aspect-ratio: auto; }
+  .cmp :global(.photo img) { transition: none; }
+  .cmp--pair { cursor: ew-resize; }
+  .cmp--pair .cmp__after { clip-path: inset(0 0 0 var(--pos)); }
+  .cmp__line {
+    position: absolute; top: 0; bottom: 0; left: var(--pos); width: 1px; margin-left: -0.5px;
+    background: var(--paper); z-index: 2; pointer-events: none;
+  }
+  .cmp__knob {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--paper); color: var(--ink);
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    font-family: var(--font-display); font-size: 1.375rem; line-height: 1; font-style: normal;
+    box-shadow: 0 1px 8px rgba(35, 37, 33, 0.18);
+  }
+  .cmp__knob i { font-style: normal; transform: translateY(-1px); }
+  .cmp__tag {
+    position: absolute; top: 12px; z-index: 2;
+    font-size: 0.625rem; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; line-height: 1;
+    background: var(--paper); color: var(--ink); padding: 6px 8px 5px;
+    pointer-events: none;
+  }
+  .cmp__tag--b { left: 12px; }
+  .cmp__tag--a { right: 12px; }
+  /* range: keyboard + a touch strip along the bottom; visually hidden but full size for hit testing */
+  .cmp__range {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
+    width: 100%; height: 56px; margin: 0; opacity: 0; cursor: ew-resize;
+  }
+  .cmp:has(.cmp__range:focus-visible) { outline: 2px solid var(--moss); outline-offset: 3px; }
+</style>
+
+<script>
+  // Pointer drag / click anywhere on the frame moves the seam; the range input handles keyboard and touch on the bottom strip.
+  document.querySelectorAll<HTMLElement>('[data-compare].cmp--pair').forEach((el) => {
+    const range = el.querySelector<HTMLInputElement>('.cmp__range');
+    if (!range) return;
+    const set = (v: number) => {
+      const n = Math.max(0, Math.min(100, Math.round(v)));
+      el.style.setProperty('--pos', n + '%');
+      range.value = String(n);
+    };
+    const fromEvent = (e: PointerEvent) => {
+      const r = el.getBoundingClientRect();
+      return ((e.clientX - r.left) / r.width) * 100;
+    };
+    range.addEventListener('input', () => set(Number(range.value)));
+    let active = false, moved = false;
+    el.addEventListener('pointerdown', (e) => {
+      if (e.target === range) return;
+      active = true; moved = false;
+      el.setPointerCapture(e.pointerId);
+      if (e.pointerType === 'mouse') set(fromEvent(e));
+    });
+    el.addEventListener('pointermove', (e) => {
+      if (!active) return;
+      moved = true;
+      set(fromEvent(e));
+    });
+    const end = (e: PointerEvent) => {
+      if (!active) return;
+      active = false;
+      if (!moved && e.type === 'pointerup') set(fromEvent(e)); // tap without drag
+    };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+  });
+</script>

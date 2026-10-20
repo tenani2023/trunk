@@ -1,0 +1,19 @@
+---
+interface Props {
+  en: string;
+  jp: string;
+  level?: 'h1' | 'h2';
+  class?: string;
+  align?: 'left' | 'right';
+}
+const { en, jp, level: Tag = 'h2', class: className = '', align = 'left' } = Astro.props;
+---
+
+<div class:list={['section-head', className, align === 'right' && 'section-head--right']} data-reveal>
+  <Tag class="display">{en}</Tag>
+  <p class="h-jp">{jp}</p>
+</div>
+
+<style>
+  .section-head--right { align-items: flex-end; text-align: right; }
+</style>

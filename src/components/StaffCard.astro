@@ -1,0 +1,44 @@
+---
+import Photo from './Photo.astro';
+import type { StaffMember } from '@/data/staff';
+
+interface Props {
+  member: StaffMember;
+  sizes?: string;
+  index?: number;
+  /** 一覧ページでは一言のほかに得意分野も出す */
+  detailed?: boolean;
+  heading?: 'h2' | 'h3';
+  loading?: 'lazy' | 'eager';
+}
+const { member, sizes = '(min-width: 900px) 22vw, 45vw', index = 0, detailed = false, heading: Tag = 'h3', loading = 'lazy' } = Astro.props;
+---
+
+<article class="staff-card" data-reveal style={`--reveal-delay:${(index % 4) * 0.08}s`}>
+  <a href={`/staff/${member.id}`} class="staff-card__link">
+    <Photo id={member.image} sizes={sizes} loading={loading} fetchpriority={loading === 'eager' ? 'high' : 'auto'} />
+    <div class="staff-card__body">
+      <p class="label">{member.role}</p>
+      <Tag class="staff-card__name h-jp">{member.name}</Tag>
+      <p class="staff-card__en display">{member.nameEn}</p>
+      <p class="staff-card__tag small">{member.tagline}</p>
+      {detailed && (
+        <p class="staff-card__spec small muted">{member.specialties.join(' / ')}</p>
+      )}
+    </div>
+  </a>
+</article>
+
+<style>
+  .staff-card__link { display: block; }
+  .staff-card__body { display: flex; flex-direction: column; gap: 2px; padding-top: 12px; }
+  .staff-card__name { font-size: 1rem; }
+  .staff-card__en { font-size: 1.375rem; line-height: 1.1; letter-spacing: 0; color: var(--ink-2); }
+  :global(.on-ink) .staff-card__en { color: var(--on-ink-2); }
+  .staff-card__tag { margin-top: 6px; }
+  .staff-card__demo { text-transform: none; letter-spacing: 0.06em; }
+  @media (min-width: 900px) {
+    .staff-card__name { font-size: 1.0625rem; }
+    .staff-card__en { font-size: 1.625rem; }
+  }
+</style>

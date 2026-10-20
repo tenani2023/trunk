@@ -1,0 +1,74 @@
+---
+/**
+ * ファーストビュー（Cinematic）。写真が最初の1画面を端から端まで満たし、左下に紙色のワードマーク。
+ * 文字を写真に載せる唯一の場所。下辺に薄い墨のグラデーションで可読性を確保。
+ * イントロ: 写真の引きズーム → ワードマークのマスク → コピー。
+ * スクロール: ヒーローは画面に留まり（sticky）、続くセクションが上に被さってくる。その間、写真はわずかに寄り、文字は消えていく。
+ */
+import Logo from '@/components/Logo.astro';
+import Photo from '@/components/Photo.astro';
+import ReserveLink from '@/components/ReserveLink.astro';
+import { brand, area } from '@/data/site';
+---
+
+<section class="ha" aria-labelledby="hero-title">
+  <div class="ha__media">
+    <Photo id="heroPortrait" sizes="100vw" loading="eager" fetchpriority="high" widths={[640, 960, 1280, 1800, 2400]} />
+  </div>
+  <div class="ha__content wrap">
+    <p class="label ha__kind">Hair salon — {brand.kind} / {area.cityShort}</p>
+    <div class="ha__bottom">
+      <h1 id="hero-title" class="ha__title"><Logo size="clamp(5.5rem, 26vw, 18rem)" /></h1>
+      <div class="ha__text">
+        <p class="ha__copy h-jp">{brand.tagline}</p>
+        <div class="ha__actions">
+          <ReserveLink variant="btn" label="予約する" class="ha__btn" />
+          <a href="/menu" class="link">メニュー・料金<span class="arrow" aria-hidden="true">→</span></a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .ha { position: sticky; top: var(--header-h); z-index: 0; height: calc(100svh - var(--header-h)); min-height: 560px; max-height: 1100px; overflow: hidden; color: var(--paper); }
+  .ha__media { position: absolute; inset: 0; }
+  .ha__media :global(.photo) { width: 100%; height: 100%; aspect-ratio: auto; background: var(--ink); }
+  .ha__media :global(.photo picture), .ha__media :global(.photo img) { height: 100%; }
+  .ha__media::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(35, 37, 33, 0.62) 0%, rgba(35, 37, 33, 0.18) 40%, transparent 65%); }
+  .ha__content { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding-top: 18px; padding-bottom: clamp(24px, 4vh, 48px); }
+  .ha__kind { color: rgba(244, 242, 237, 0.85); }
+  .ha__title { line-height: 0.85; }
+  .ha__bottom { display: flex; flex-direction: column; gap: 16px; }
+  .ha__copy { font-size: 1.25rem; letter-spacing: 0.04em; }
+  .ha__actions { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin-top: 6px; }
+  :global(.ha__btn) { background: var(--paper); color: var(--ink); border-color: var(--paper); }
+  :global(.ha__btn:hover) { background: transparent; color: var(--paper); }
+  .ha :global(.link::after) { background: currentColor; }
+
+  @keyframes ha-zoom { from { transform: scale(1.12); } to { transform: scale(1); } }
+  @keyframes ha-up { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+  @keyframes ha-mask { from { clip-path: inset(0 0 100% 0); transform: translateY(0.25em); } to { clip-path: inset(-0.1em 0 -0.15em 0); transform: none; } }
+  :global(.js) .ha__media :global(.photo picture) { animation: ha-zoom 2.8s var(--ease) both; }
+  :global(.js) .ha__kind { animation: ha-up 0.9s var(--ease) 0.5s both; }
+  :global(.js) .ha__title :global(.logo) { animation: ha-mask 1.2s var(--ease) 0.4s both; }
+  :global(.js) .ha__copy { animation: ha-up 0.9s var(--ease) 0.95s both; }
+  :global(.js) .ha__actions { animation: ha-up 0.9s var(--ease) 1.1s both; }
+  @supports (animation-timeline: scroll()) {
+    /* while the next section slides over: the photo creeps in and darkens, the text lifts away */
+    @keyframes ha-creep { to { transform: scale(1.1); } }
+    @keyframes ha-dim { to { opacity: 0.55; } }
+    @keyframes ha-fade { to { opacity: 0; transform: translateY(-40px); } }
+    .ha__media :global(.photo img) { animation: ha-creep linear both; animation-timeline: scroll(root); animation-range: 0 100vh; }
+    .ha__media :global(.photo) { animation: ha-dim linear both; animation-timeline: scroll(root); animation-range: 0 100vh; }
+    .ha__content { animation: ha-fade linear both; animation-timeline: scroll(root); animation-range: 0 60vh; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :global(.js) .ha__media :global(.photo picture), :global(.js) .ha__kind, :global(.js) .ha__title :global(.logo), :global(.js) .ha__copy, :global(.js) .ha__actions, .ha__media :global(.photo img), .ha__media :global(.photo), .ha__content { animation: none; }
+  }
+  @media (min-width: 900px) {
+    .ha__bottom { flex-direction: row; align-items: flex-end; justify-content: space-between; gap: 40px; }
+    .ha__text { display: flex; flex-direction: column; gap: 10px; max-width: 30em; padding-bottom: 10px; }
+    .ha__copy { font-size: 1.5rem; }
+  }
+</style>

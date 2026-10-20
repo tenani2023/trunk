@@ -1,0 +1,102 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Photo from '@/components/Photo.astro';
+import StyleCard from '@/components/StyleCard.astro';
+import DemoNote from '@/components/DemoNote.astro';
+import ReserveLink from '@/components/ReserveLink.astro';
+import { staff } from '@/data/staff';
+import { getStylesByStaff } from '@/data/styles';
+
+export function getStaticPaths() {
+  return staff.map((m) => ({ params: { id: m.id }, props: { member: m } }));
+}
+const { member } = Astro.props;
+const related = getStylesByStaff(member.id);
+const idx = staff.findIndex((m) => m.id === member.id);
+const prev = staff[(idx - 1 + staff.length) % staff.length]!;
+const next = staff[(idx + 1) % staff.length]!;
+---
+
+<BaseLayout title={`${member.name}（${member.role}）`} description={`${member.name} — ${member.tagline}（デモプロフィール）`}>
+  <article class="person">
+    <div class="wrap grid person__top">
+      <figure class="person__fig" data-reveal>
+        <Photo id={member.image} sizes="(min-width: 900px) 40vw, 100vw" loading="eager" fetchpriority="high" />
+      </figure>
+      <div class="person__text">
+        <p class="label" data-reveal>{member.role}</p>
+        <h1 class="person__name h-jp" data-reveal>{member.name}<span class="person__kana small muted">{member.kana}</span></h1>
+        <p class="person__en display" data-reveal>{member.nameEn}</p>
+        <p class="person__tag" data-reveal>{member.tagline}</p>
+        <div class="person__bio" data-reveal>
+          {member.bio.map((p) => <p>{p}</p>)}
+        </div>
+        <dl class="person__meta small" data-reveal>
+          <div><dt class="label">得意なこと</dt><dd>{member.specialties.join(' / ')}</dd></div>
+          <div><dt class="label">指名予約</dt><dd>{member.nominatable ? '可（指名料 ¥550）' : 'アシスタントのため指名予約はありません'}</dd></div>
+        </dl>
+        <div class="person__actions" data-reveal>
+          <ReserveLink variant="btn" label={member.nominatable ? `${member.name}を指名して予約` : '予約する'} />
+          <a href="/staff" class="link">スタッフ一覧<span class="arrow" aria-hidden="true">→</span></a>
+        </div>
+        <DemoNote text="デモプロフィールです。氏名・役職・紹介は仮で、写真は素材写真です。" class="person__demo" />
+      </div>
+    </div>
+
+    {related.length > 0 && (
+      <section class="person__styles section--tight" aria-labelledby="related-title">
+        <div class="wrap">
+          <div class="person__styles-head">
+            <h2 id="related-title" class="display">Styles by {member.nameEn.split(' ')[0]}</h2>
+            <p class="h-jp small muted">担当スタイル</p>
+          </div>
+          <ol class="person__styles-grid">
+            {related.map((s, i) => (
+              <li><StyleCard style={s} index={i} sizes="(min-width: 900px) 28vw, 46vw" /></li>
+            ))}
+          </ol>
+        </div>
+      </section>
+    )}
+
+    <nav class="person__nav wrap" aria-label="前後のスタッフ">
+      <a href={`/staff/${prev.id}`} class="person__nav-link"><span class="label">Prev</span><span>{prev.name}</span></a>
+      <a href={`/staff/${next.id}`} class="person__nav-link person__nav-link--next"><span class="label">Next</span><span>{next.name}</span></a>
+    </nav>
+  </article>
+</BaseLayout>
+
+<style>
+  .person__top { padding-top: 0; row-gap: 24px; }
+  .person__fig { grid-column: 1 / -1; margin-inline: calc(var(--gutter) * -1); }
+  .person__fig :global(.photo) { --ratio: 4 / 5; max-height: 72svh; }
+  .person__text { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 10px; padding-bottom: 24px; }
+  .person__name { font-size: 1.625rem; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .person__en { font-size: clamp(2.5rem, 10vw, 4.5rem); color: var(--ink-2); margin-top: -4px; }
+  .person__tag { font-size: 1.125rem; font-weight: 500; letter-spacing: 0.02em; margin-top: 8px; }
+  .person__bio { display: flex; flex-direction: column; gap: 8px; max-width: 34em; margin-top: 4px; }
+  .person__meta { display: grid; gap: 12px; margin-top: 12px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .person__meta dd { margin-top: 2px; }
+  .person__actions { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin-top: 16px; }
+  :global(.person__demo) { margin-top: 12px; }
+
+  @media (min-width: 900px) {
+    .person__top { padding-top: clamp(24px, 3vw, 48px); align-items: start; }
+    .person__fig { grid-column: 1 / span 5; margin-inline: 0; position: sticky; top: calc(var(--header-h) + 24px); }
+    .person__fig :global(.photo) { max-height: none; }
+    .person__text { grid-column: 7 / -1; padding-top: 8px; padding-bottom: 48px; }
+    .person__name { font-size: 1.875rem; }
+    .person__meta { grid-template-columns: 1fr 1fr; }
+  }
+
+  .person__styles { border-top: 1px solid var(--line); }
+  .person__styles-head { display: flex; flex-direction: column; gap: 4px; margin-bottom: 24px; }
+  .person__styles-head .display { font-size: clamp(2rem, 6vw, 3.5rem); }
+  .person__styles-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 12px; }
+  @media (min-width: 900px) { .person__styles-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 48px clamp(24px, 3vw, 48px); } }
+
+  .person__nav { display: flex; justify-content: space-between; border-top: 1px solid var(--line); padding-block: 20px 40px; }
+  .person__nav-link { display: flex; flex-direction: column; gap: 2px; min-height: 44px; justify-content: center; }
+  .person__nav-link--next { text-align: right; align-items: flex-end; }
+  .person__nav-link:hover span:last-child { text-decoration: underline; text-underline-offset: 4px; }
+</style>

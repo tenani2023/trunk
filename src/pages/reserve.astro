@@ -1,0 +1,155 @@
+---
+/**
+ * 予約案内ページ。窓口は LINE / Instagram / 電話 / ホットペッパーの4つ。
+ * - URL・電話番号が site.ts に入っている窓口だけボタンが有効になる（未設定は「準備中」。架空のリンクは張らない）。
+ * - 個人情報は入力させない（フォームは置かない）。
+ */
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { contact, hours, area } from '@/data/site';
+import { staff } from '@/data/staff';
+
+const channels = [
+  {
+    id: 'line',
+    en: 'LINE',
+    jp: 'LINEで予約',
+    desc: '友だち追加のあと、トークで希望の日時とメニューを送ってください。空き状況をお返事します。',
+    href: contact.lineUrl,
+    cta: 'LINEで予約',
+  },
+  {
+    id: 'instagram',
+    en: 'Instagram',
+    jp: 'InstagramのDMで予約',
+    desc: 'DMで希望の日時とメニューをお知らせください。スタイルの写真を見ながらの相談もどうぞ。',
+    href: contact.instagramUrl,
+    cta: 'Instagramで予約',
+  },
+  {
+    id: 'tel',
+    en: 'Tel',
+    jp: 'お電話で予約',
+    desc: `営業時間内（平日 ${hours.weekdays.value} ／ 土日祝 ${hours.weekends.value}）にお電話ください。施術中は出られないことがあります。`,
+    href: contact.phone ? `tel:${contact.phone.replace(/[^\d+]/g, '')}` : null,
+    cta: contact.phone ? `電話する ${contact.phone}` : '電話で予約',
+  },
+  {
+    id: 'hotpepper',
+    en: 'Hot Pepper Beauty',
+    jp: 'ホットペッパーで予約',
+    desc: '24時間いつでも。空いている日時を見ながら、メニューと担当を選んで予約できます。',
+    href: contact.hotpepperUrl,
+    cta: 'ホットペッパーで予約',
+  },
+] as const;
+
+const steps = [
+  { t: '窓口を選ぶ', d: 'LINE・Instagram・お電話・ホットペッパーのどれでも同じ内容でお受けします。' },
+  { t: 'メニューと担当を伝える（担当は任意）', d: `迷ったら「カット」で大丈夫です。指名できるのは ${staff.filter((s) => s.nominatable).map((s) => s.name).join('、')} です。` },
+  { t: '日時を決める', d: `最終受付は ${hours.lastEntry.value}。初回の方は +15分ほど余裕を見てください。` },
+];
+---
+
+<BaseLayout title="予約について" description={`${area.cityShort}の美容室 TRUNK のご予約方法。LINE・Instagram・お電話・ホットペッパーからご予約いただけます。`}>
+  <section class="head">
+    <div class="wrap">
+      <p class="label" data-reveal>Reservation — {area.cityShort}</p>
+      <h1 class="display head__title" data-reveal>Book <em>a seat.</em></h1>
+      <p class="head__lead" data-reveal>ご予約は LINE・Instagram・お電話・ホットペッパーから。はじめての方も、髪の相談だけでも、どうぞ。</p>
+    </div>
+  </section>
+
+  <section class="ways" aria-label="予約の窓口">
+    <div class="wrap">
+      <ol class="ways__grid">
+        {channels.map((c, i) => (
+          <li class="way" id={c.id} data-reveal style={`--reveal-delay:${i * 0.08}s`}>
+            <p class="way__no num">0{i + 1}</p>
+            <h2 class="way__en display">{c.en}</h2>
+            <p class="way__jp h-jp">{c.jp}</p>
+            <p class="way__desc small muted">{c.desc}</p>
+            {/* URL が入るとリンクになる。未設定のあいだは同じ見た目のボタン（リンク先なし。架空のURLは張らない） */}
+            {c.href ? (
+              <a href={c.href} class="btn way__btn" target={c.id === 'tel' ? undefined : '_blank'} rel={c.id === 'tel' ? undefined : 'noopener'}>{c.cta}</a>
+            ) : (
+              <span class="btn way__btn" role="link" aria-disabled="true" title="リンク先は設定後に有効になります">{c.cta}</span>
+            )}
+          </li>
+        ))}
+      </ol>
+    </div>
+  </section>
+
+  <section class="section--tight steps">
+    <div class="wrap steps__grid">
+      <div class="steps__head" data-reveal><p class="label">How to</p><p class="h-jp">予約の流れ</p></div>
+      <ol class="steps__list">
+        {steps.map((s, i) => (
+          <li class="steps__item" data-reveal style={`--reveal-delay:${i * 0.08}s`}>
+            <span class="steps__num display">0{i + 1}</span>
+            <div>
+              <h3 class="steps__t h-jp">{s.t}</h3>
+              <p class="small muted">{s.d}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </section>
+
+  <section class="section--tight faq">
+    <div class="wrap steps__grid">
+      <div class="steps__head" data-reveal><p class="label">Notes</p><p class="h-jp">ご来店前に</p></div>
+      <dl class="faq__list" data-reveal>
+        <div><dt>遅れそうなとき</dt><dd class="small muted">15分以上遅れる場合は、施術内容を変更させていただくことがあります。</dd></div>
+        <div><dt>キャンセル</dt><dd class="small muted">前日までにご連絡ください。</dd></div>
+        <div><dt>お子さま連れ</dt><dd class="small muted">席の空き状況によりますので、ご予約時にお知らせください。</dd></div>
+        <div><dt>相談だけ</dt><dd class="small muted">カットの枠でご予約のうえ、当日「相談だけ」とお伝えください。無理におすすめしません。</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <p class="wrap back"><a href="/" class="link">トップへ戻る<span class="arrow" aria-hidden="true">→</span></a></p>
+</BaseLayout>
+
+<style>
+  .head { padding-top: clamp(24px, 4vw, 56px); padding-bottom: clamp(28px, 4vw, 48px); }
+  .head__title { font-size: clamp(3.25rem, 14vw, 8rem); line-height: 0.9; margin: 8px 0 18px; letter-spacing: -0.02em; }
+  .head__lead { max-width: 32em; }
+
+  .ways { padding-bottom: clamp(40px, 6vw, 80px); }
+  .ways__grid { display: grid; grid-template-columns: 1fr; border-top: 1px solid var(--line); }
+  .way { display: flex; flex-direction: column; gap: 6px; padding: 22px 0 26px; border-bottom: 1px solid var(--line); }
+  .way__no { color: var(--ink-3); font-size: 1rem; }
+  .way__en { font-size: clamp(2.25rem, 9vw, 3.25rem); line-height: 0.95; }
+  .way__jp { font-size: 0.9375rem; margin-top: 4px; }
+  .way__desc { max-width: 30em; }
+  :global(.way__btn) { align-self: stretch; margin-top: auto; }
+  .way__desc { margin-bottom: 12px; }
+  @media (min-width: 600px) { :global(.way__btn) { align-self: flex-start; min-width: 200px; } }
+
+  .steps, .faq { border-top: 1px solid var(--line); }
+  .steps__grid { display: grid; grid-template-columns: 1fr; row-gap: 16px; }
+  .steps__list { display: flex; flex-direction: column; }
+  .steps__item { display: flex; gap: 16px; padding: 16px 0; border-top: 1px solid var(--line); }
+  .steps__item:last-child { border-bottom: 1px solid var(--line); }
+  .steps__num { font-size: 2rem; line-height: 1; min-width: 2ch; color: var(--ink-2); }
+  .steps__t { font-size: 1rem; margin-bottom: 2px; }
+  .faq__list { display: flex; flex-direction: column; gap: 14px; max-width: 40em; }
+  .faq__list dt { font-weight: 500; }
+  .back { padding-block: 24px 56px; }
+
+  @media (min-width: 600px) {
+    .ways__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: clamp(24px, 3vw, 48px); }
+  }
+  @media (min-width: 900px) {
+    .ways__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: clamp(20px, 2.5vw, 40px); }
+    .way { padding: 28px 0 36px; }
+    .way__en { font-size: clamp(2rem, 2.6vw, 2.75rem); }
+    .steps__grid { grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: clamp(12px, 2vw, 32px); row-gap: 0; }
+    .steps__head { grid-column: 1 / span 4; }
+    .steps__list, .faq__list { grid-column: 6 / -1; }
+    .steps__item { padding: 20px 0; gap: 24px; }
+    .steps__num { font-size: 2.5rem; }
+  }
+</style>

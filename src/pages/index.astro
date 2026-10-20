@@ -1,0 +1,380 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Hero from '@/components/Hero.astro';
+import Photo from '@/components/Photo.astro';
+import ReserveLink from '@/components/ReserveLink.astro';
+import SectionHead from '@/components/SectionHead.astro';
+import StaffCard from '@/components/StaffCard.astro';
+import WorkCard from '@/components/WorkCard.astro';
+import DemoNote from '@/components/DemoNote.astro';
+import { brand, location, hours, area } from '@/data/site';
+import { featuredStyles } from '@/data/styles';
+import { getWorks } from '@/lib/works';
+import { staff } from '@/data/staff';
+import { featuredMenu, formatPrice, menuStatus } from '@/data/menu';
+import { getImage } from 'astro:assets';
+import { media } from '@/data/media';
+
+// ヒーロー画像（LCP）を先読み。<Photo> と同じ widths / sizes / 形式で生成する。
+const heroPreload = await getImage({
+  src: media.heroPortrait.src,
+  widths: [640, 960, 1280, 1800, 2400],
+  format: 'avif',
+  quality: 78,
+  fit: 'cover',
+  position: 'center',
+});
+const heroSizes = '100vw';
+// 施術事例: featured を優先して新しい順に 4 件
+const allWorks = await getWorks();
+const latestWorks = [...allWorks.filter((w) => w.data.featured), ...allWorks.filter((w) => !w.data.featured)].slice(0, 6);
+const hasDemoWorks = latestWorks.some((w) => w.data.isDemo);
+---
+
+<BaseLayout>
+  <link slot="head" rel="preload" as="image" imagesrcset={heroPreload.srcSet.attribute} imagesizes={heroSizes} type="image/avif" fetchpriority="high" />
+  <!-- A. First view — Hero.astro. Sticky: the sections below slide over it while scrolling. -->
+  <Hero />
+
+  <div class="home__after">
+  <!-- B. Concept -->
+  <section class="concept section" aria-labelledby="concept-title">
+    <div class="wrap grid">
+      <div class="concept__text" data-reveal>
+        <p class="label">Concept</p>
+        <h2 id="concept-title" class="concept__title h-jp">{brand.tagline}</h2>
+        {brand.concept.map((line) => <p class="concept__p">{line}</p>)}
+      </div>
+      <figure class="concept__fig concept__fig--a" data-reveal>
+        <Photo id="conceptHair" sizes="(min-width: 900px) 30vw, 62vw" />
+      </figure>
+      <figure class="concept__fig concept__fig--b" data-reveal style="--reveal-delay:.12s">
+        <Photo id="conceptLight" sizes="(min-width: 900px) 20vw, 42vw" />
+        <figcaption class="caption">光の入る、静かな席。</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- C. Selected styles — photos only. Six frames of different sizes, staggered; a tiny category label is the only text. -->
+  <section class="sel section" aria-labelledby="styles-title">
+    <div class="wrap">
+      <div class="sel__head">
+        <SectionHead en="Selected Styles" jp="長さと質感で選んだ6つ" />
+        <a href="/styles" class="link sel__all">すべてのスタイル<span class="arrow" aria-hidden="true">→</span></a>
+      </div>
+      <ol class="sel__grid">
+        {featuredStyles.map((s, i) => (
+          <li class:list={['sel__item', `sel__item--${i + 1}`]} data-reveal style={`--reveal-delay:${(i % 3) * 0.1}s`}>
+            <a href="/styles" class="sel__link" aria-label={`${s.name} — すべてのスタイルを見る`}>
+              <Photo id={s.image} sizes="(min-width: 900px) 30vw, 60vw" />
+              <span class="sel__cat label" aria-hidden="true">{s.category}</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+      <a href="/styles" class="link sel__all--m">すべてのスタイル<span class="arrow" aria-hidden="true">→</span></a>
+    </div>
+  </section>
+
+  <!-- C2. Works — 施術事例。横に流れるレール（ネイティブスクロール＋スナップ）。各カードは Before/After が 1 枚のフレームに同居。 -->
+  <section class="works section" aria-labelledby="works-title">
+    <div class="wrap works__head">
+      <SectionHead en="Works" jp="最近の施術事例" />
+      <div class="works__side" data-reveal>
+        <p class="works__lead">{area.cityShort}の店舗での、カット・カラー・パーマ・縮毛矯正の仕上がり。担当スタイリストの考えと一緒に載せています。</p>
+        <div class="works__btns" data-rail-btns>
+          <button type="button" class="works__btn" data-rail-prev aria-label="前の事例へ"><span class="display">←</span></button>
+          <button type="button" class="works__btn" data-rail-next aria-label="次の事例へ"><span class="display">→</span></button>
+        </div>
+      </div>
+    </div>
+    <ol class="rail" data-rail aria-label="最近の施術事例">
+      {latestWorks.map((w, i) => (
+        <li class="rail__item">
+          <WorkCard work={w} index={i} sizes="(min-width: 900px) 26vw, 76vw" />
+        </li>
+      ))}
+      <li class="rail__item rail__item--end">
+        <a href="/works" class="rail__all">
+          <span class="display rail__all-en">All<br /><em>works.</em></span>
+          <span class="rail__all-jp label">すべての施術事例 <span class="num">{allWorks.length}</span></span>
+        </a>
+      </li>
+    </ol>
+    <div class="wrap works__foot">
+      {hasDemoWorks && <DemoNote text="事例の写真は素材写真によるイメージで、TRUNKの実際の施術例ではありません。" />}
+      <a href="/works" class="link">すべての施術事例<span class="arrow" aria-hidden="true">→</span></a>
+    </div>
+  </section>
+
+  <!-- D. People -->
+  <section class="people section on-ink people--r2" aria-labelledby="people-title">
+    <div class="wrap">
+      <div class="people__head">
+        <SectionHead en="People" jp="4人でやっています" />
+        <p class="people__lead" data-reveal>スタイリスト3人とアシスタント1人。それぞれの得意と、話しやすさを知ってから選んでください。</p>
+      </div>
+      <ol class="people__grid">
+        {staff.map((m, i) => (
+          <li><StaffCard member={m} index={i} sizes="(min-width: 900px) 22vw, 46vw" /></li>
+        ))}
+      </ol>
+      <div class="people__foot">
+        <DemoNote text="デモプロフィールです。氏名・役職・紹介は仮で、写真は素材写真です。" />
+        <a href="/staff" class="link">スタッフ紹介<span class="arrow" aria-hidden="true">→</span></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- E. Menu -->
+  <section class="menu section" aria-labelledby="menu-title">
+    <div class="wrap grid">
+      <div class="menu__head">
+        <SectionHead en="Menu" jp="主なメニューと料金" />
+        <p class="small muted" data-reveal>すべて税込。「〜」は髪の長さ・状態により変動します。</p>
+      </div>
+      <dl class="menu__list" data-reveal>
+        {featuredMenu.map((item) => (
+          <div class="menu__row">
+            <dt>
+              <span class="menu__cat label">{item.category.en}</span>
+              <span class="menu__name">{item.name}</span>
+            </dt>
+            <dd class="menu__price"><span class="num">{formatPrice(item)}</span></dd>
+          </div>
+        ))}
+      </dl>
+      <div class="menu__foot">
+        <a href="/menu" class="link">メニュー・料金をすべて見る<span class="arrow" aria-hidden="true">→</span></a>
+        {menuStatus === 'demo' && <DemoNote text="料金はすべて仮の金額です。" />}
+      </div>
+    </div>
+  </section>
+
+  <!-- F. Salon & access -->
+  <section class="salon section" aria-labelledby="salon-title">
+    <div class="wrap grid">
+      <figure class="salon__fig salon__fig--main" data-reveal>
+        <Photo id="salonMain" sizes="(min-width: 900px) 46vw, 100vw" />
+      </figure>
+      <div class="salon__text" data-reveal>
+        <SectionHead en="Salon" jp="サロンとアクセス" />
+        <dl class="salon__info">
+          <div><dt class="label">Address</dt><dd>{location.postal.value}<br />{location.address.value}</dd></div>
+          <div><dt class="label">Access</dt><dd>{location.access.value}</dd></div>
+          <div><dt class="label">Hours</dt><dd>平日 {hours.weekdays.value}<br />土日祝 {hours.weekends.value}</dd></div>
+          <div><dt class="label">Closed</dt><dd>{hours.closed.value}</dd></div>
+        </dl>
+        <a href="/salon" class="link">サロン・アクセスの詳細<span class="arrow" aria-hidden="true">→</span></a>
+        <DemoNote text="店舗写真はイメージで、実店舗ではありません。住所・営業時間も仮の表示です。" />
+      </div>
+      <figure class="salon__fig salon__fig--detail" data-reveal style="--reveal-delay:.1s">
+        <Photo id="salonDetail" sizes="(min-width: 900px) 30vw, 60vw" />
+      </figure>
+    </div>
+  </section>
+
+  <!-- G. Reserve -->
+  <section class="reserve section--tight" aria-labelledby="reserve-title">
+    <div class="wrap reserve__inner" data-reveal>
+      <div>
+        <p class="label">Reservation</p>
+        <h2 id="reserve-title" class="reserve__title display">Come <em>as you are.</em></h2>
+        <p class="reserve__lead">はじめての方も、髪のことを相談するだけでも。<br class="br-pc" />空いている日時から選べます。</p>
+      </div>
+      <div class="reserve__actions">
+        <ReserveLink variant="btn" label="予約する" />
+        <a href="/reserve" class="link">予約について<span class="arrow" aria-hidden="true">→</span></a>
+      </div>
+    </div>
+  </section>
+  </div>
+</BaseLayout>
+
+<style>
+  /* ---------------- Hero cover ---------------- */
+  /* Everything after the hero sits on its own paper layer above the sticky hero, so it covers it on scroll. */
+  .home__after { position: relative; z-index: 1; background: var(--paper); }
+
+  /* ---------------- Concept ---------------- */
+  .concept .grid { row-gap: 28px; }
+  .concept__text { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 12px; }
+  .concept__title { font-size: 1.375rem; margin-top: 4px; }
+  .concept__p { max-width: 34em; }
+  .concept__fig--a { grid-column: 1 / span 8; margin-top: 8px; }
+  .concept__fig--b { grid-column: 7 / -1; margin-top: clamp(40px, 12vw, 80px); align-self: end; }
+  @media (max-width: 899px) {
+    .concept__fig--b { grid-column: 8 / -1; margin-top: -40px; }
+  }
+  @media (min-width: 900px) {
+    .concept .grid { row-gap: 0; }
+    .concept__text { grid-column: 1 / span 5; padding-right: 32px; padding-top: 24px; }
+    .concept__title { font-size: 1.625rem; }
+    .concept__fig--a { grid-column: 7 / span 4; margin-top: 0; }
+    .concept__fig--b { grid-column: 11 / -1; margin-top: clamp(80px, 12vw, 160px); }
+  }
+
+  /* ---------------- Selected styles ---------------- */
+  .sel__head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; }
+  .sel__all { display: none; margin-bottom: clamp(24px, 4vw, 48px); flex: none; }
+  .sel__all--m { margin-top: 28px; }
+  .sel__link { display: block; }
+  .sel__link :global(.photo) { --ratio: 3 / 4; }
+  .sel__cat { display: block; margin-top: 8px; color: var(--ink-3); font-size: 0.625rem; }
+  /* SP: a loose 12-column collage — wide, narrow, offset — instead of a tidy 2-up */
+  .sel__grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: 12px; row-gap: 28px; }
+  .sel__item--1 { grid-column: 1 / span 7; }
+  .sel__item--2 { grid-column: 8 / -1; margin-top: 45%; }
+  .sel__item--3 { grid-column: 2 / span 6; margin-top: -8%; }
+  .sel__item--4 { grid-column: 8 / -1; margin-top: 22%; }
+  .sel__item--5 { grid-column: 1 / span 5; margin-top: -12%; }
+  .sel__item--6 { grid-column: 6 / -1; margin-top: 6%; }
+  @media (min-width: 600px) { .sel__grid { column-gap: 24px; } }
+  @media (min-width: 900px) {
+    .sel__all { display: inline-flex; }
+    .sel__all--m { display: none; }
+    .sel__grid { column-gap: clamp(20px, 2.5vw, 40px); row-gap: clamp(40px, 5vw, 80px); }
+    .sel__item--1 { grid-column: 1 / span 4; margin-top: 0; }
+    .sel__item--2 { grid-column: 6 / span 3; margin-top: clamp(80px, 9vw, 140px); align-self: start; }
+    .sel__item--3 { grid-column: 10 / span 3; margin-top: clamp(16px, 2vw, 32px); }
+    .sel__item--4 { grid-column: 2 / span 3; margin-top: clamp(-40px, -3vw, -24px); }
+    .sel__item--5 { grid-column: 6 / span 4; margin-top: 0; }
+    .sel__item--6 { grid-column: 11 / span 2; margin-top: clamp(64px, 7vw, 120px); }
+  }
+
+  /* ---------------- Works ---------------- */
+  .works { border-top: 1px solid var(--line); overflow: hidden; }
+  .works__head { display: flex; flex-direction: column; gap: 8px; }
+  .works__side { display: flex; flex-direction: column; gap: 12px; margin-top: -12px; margin-bottom: 8px; }
+  .works__lead { max-width: 34em; color: var(--ink-2); font-size: 0.9375rem; }
+  .works__btns { display: none; gap: 8px; }
+  .works__btn {
+    width: 48px; height: 48px; border: 1px solid var(--line-strong); border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 1.375rem; line-height: 1;
+    transition: background 0.25s var(--ease), color 0.25s var(--ease);
+  }
+  .works__btn:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .works__btn[disabled] { opacity: 0.3; pointer-events: none; }
+
+  /* Rail: native horizontal scroll with snap. Edge padding lines the first card up with .wrap. */
+  .rail {
+    --rail-pad: max(var(--gutter), calc((100vw - var(--max)) / 2 + var(--gutter)));
+    display: flex; gap: 14px;
+    overflow-x: auto; overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    padding: 8px var(--rail-pad) 8px;
+    scroll-padding-inline: var(--rail-pad);
+    scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+  .rail::-webkit-scrollbar { display: none; }
+  .rail__item { flex: 0 0 min(76vw, 360px); scroll-snap-align: start; }
+  .rail__item--end { flex-basis: min(60vw, 280px); display: flex; }
+  .rail__all {
+    flex: 1; display: flex; flex-direction: column; justify-content: space-between;
+    aspect-ratio: 3 / 4; padding: 20px;
+    border: 1px solid var(--line-strong); border-radius: var(--radius);
+    transition: background 0.3s var(--ease), color 0.3s var(--ease);
+  }
+  .rail__all:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .rail__all:hover .rail__all-jp { color: var(--on-ink-2); }
+  .rail__all-en { font-size: clamp(2.5rem, 9vw, 4rem); line-height: 0.95; }
+  .rail__all-jp .num { font-size: 1rem; }
+  .works__foot { display: flex; flex-direction: column; gap: 16px; margin-top: 24px; }
+  @media (min-width: 900px) {
+    .works__head { flex-direction: row; justify-content: space-between; align-items: flex-end; }
+    .works__side { align-items: flex-end; margin: 0 0 clamp(24px, 4vw, 48px); }
+    .works__lead { text-align: right; }
+    :global(.js) .works__btns { display: flex; }
+    .rail { gap: clamp(20px, 2.5vw, 40px); padding-top: 16px; }
+    .rail__item { flex-basis: clamp(280px, 26vw, 400px); }
+    .rail__item--end { flex-basis: clamp(220px, 20vw, 300px); }
+    .works__foot { flex-direction: row; justify-content: space-between; align-items: center; margin-top: 32px; }
+  }
+
+  /* ---------------- People ---------------- */
+  .people--r2 { padding-block: clamp(48px, 7vw, 96px); }
+  .people__head { display: flex; flex-direction: column; gap: 8px; }
+  .people__lead { max-width: 34em; color: var(--on-ink-2); margin-top: -12px; margin-bottom: 28px; font-size: 0.9375rem; }
+  .people__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 12px; row-gap: 32px; }
+  .people__foot { display: flex; flex-direction: column; gap: 16px; margin-top: 40px; }
+  @media (min-width: 900px) {
+    .people__head { flex-direction: row; justify-content: space-between; align-items: flex-end; }
+    .people__lead { margin: 0 0 clamp(24px, 4vw, 48px); text-align: right; }
+    .people__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: clamp(20px, 2.5vw, 40px); }
+    .people__foot { flex-direction: row; justify-content: space-between; align-items: center; margin-top: 56px; }
+  }
+
+  /* ---------------- Menu ---------------- */
+  .menu .grid { row-gap: 8px; }
+  .menu__head { grid-column: 1 / -1; }
+  .menu__list { grid-column: 1 / -1; border-top: 1px solid var(--line); }
+  .menu__row {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+    padding: 14px 0; border-bottom: 1px solid var(--line);
+  }
+  .menu__row dt { display: flex; flex-direction: column; gap: 2px; }
+  .menu__name { font-size: 0.9688rem; }
+  .menu__price { white-space: nowrap; }
+  .menu__foot { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+  @media (min-width: 900px) {
+    .menu__head { grid-column: 1 / span 4; }
+    .menu__list { grid-column: 6 / -1; }
+    .menu__row { padding: 18px 0; }
+    .menu__row dt { flex-direction: row; align-items: baseline; gap: 20px; }
+    .menu__cat { min-width: 9ch; }
+    .menu__name { font-size: 1rem; }
+    .menu__foot { grid-column: 6 / -1; flex-direction: row; justify-content: space-between; align-items: center; margin-top: 24px; }
+  }
+
+  /* ---------------- Salon ---------------- */
+  .salon .grid { row-gap: 24px; }
+  .salon__fig--main { grid-column: 1 / -1; margin-inline: calc(var(--gutter) * -1); }
+  .salon__fig--main :global(.photo) { --ratio: 4 / 5; max-height: 70svh; }
+  .salon__text { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 20px; }
+  .salon__info { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  .salon__info dd { margin-top: 2px; font-size: 0.9375rem; }
+  .salon__fig--detail { grid-column: 5 / -1; }
+  @media (min-width: 900px) {
+    .salon .grid { row-gap: 0; align-items: start; }
+    .salon__fig--main { grid-column: 1 / span 6; margin-inline: 0; grid-row: 1 / span 2; }
+    .salon__fig--main :global(.photo) { max-height: none; }
+    .salon__text { grid-column: 8 / -1; padding-top: 8px; }
+    .salon__info { grid-template-columns: 1fr 1fr; gap: 18px 24px; }
+    .salon__fig--detail { grid-column: 8 / span 4; margin-top: clamp(40px, 5vw, 72px); }
+  }
+
+  /* ---------------- Reserve ---------------- */
+  .reserve { border-top: 1px solid var(--line); }
+  .reserve__inner { display: flex; flex-direction: column; gap: 24px; }
+  .reserve__title { font-size: clamp(2.75rem, 11vw, 6rem); margin-top: 8px; }
+  .reserve__lead { margin-top: 14px; max-width: 32em; }
+  .reserve__actions { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+  .br-pc { display: none; }
+  @media (min-width: 900px) {
+    .reserve__inner { flex-direction: row; justify-content: space-between; align-items: flex-end; }
+    .reserve__actions { padding-bottom: 8px; }
+    .br-pc { display: inline; }
+  }
+</style>
+
+<script>
+  // Works rail: prev / next buttons for mouse users (the rail itself is native scroll + snap).
+  const rail = document.querySelector<HTMLElement>('[data-rail]');
+  const prevBtn = document.querySelector<HTMLButtonElement>('[data-rail-prev]');
+  const nextBtn = document.querySelector<HTMLButtonElement>('[data-rail-next]');
+  if (rail && prevBtn && nextBtn) {
+    const step = () => (rail.querySelector<HTMLElement>('.rail__item')?.offsetWidth ?? 300) + 24;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const go = (dir: number) => rail.scrollBy({ left: dir * step(), behavior: reduce ? 'auto' : 'smooth' });
+    prevBtn.addEventListener('click', () => go(-1));
+    nextBtn.addEventListener('click', () => go(1));
+    const update = () => {
+      prevBtn.disabled = rail.scrollLeft <= 2;
+      nextBtn.disabled = rail.scrollLeft + rail.clientWidth >= rail.scrollWidth - 2;
+    };
+    rail.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    update();
+  }
+</script>

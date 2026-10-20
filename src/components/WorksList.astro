@@ -1,0 +1,155 @@
+---
+/**
+ * 事例一覧（/works と /works/category/*）の共通本体。
+ * 見出し → 流れるカテゴリ帯 → 地名入りの導入文 → カテゴリ切り替え → 大小の非対称グリッド（通し番号）→ ページ送り → 予約導線。
+ */
+import type { Page } from 'astro';
+import SectionHead from './SectionHead.astro';
+import Breadcrumbs from './Breadcrumbs.astro';
+import WorkCard from './WorkCard.astro';
+import DemoNote from './DemoNote.astro';
+import ReserveLink from './ReserveLink.astro';
+import type { Work } from '@/lib/works';
+import { workCategories, workCategoryPath, worksPath, type WorkCategory } from '@/data/works';
+import { brand, area } from '@/data/site';
+
+interface Props {
+  page: Page<Work>;
+  /** カテゴリページのとき */
+  category?: WorkCategory;
+  /** 各カテゴリの件数（ナビ表示用） */
+  counts: Record<string, number>;
+  totalCount: number;
+}
+const { page, category, counts, totalCount } = Astro.props;
+const hasDemo = page.data.some((w) => w.data.isDemo);
+const crumbs = [{ href: '/', label: 'トップ' }, { href: '/works', label: '施術事例' }, ...(category ? [{ href: workCategoryPath(category.id), label: category.label }] : [])];
+const headEn = category ? category.en : 'Works';
+const headJp = category ? `${category.label}の施術事例` : '施術事例';
+const lead = category
+  ? category.lead
+  : `${area.city}の${brand.kind} ${brand.name} の施術事例。カット・カラー・パーマ・縮毛矯正・キッズカットの仕上がりを、担当スタイリストの考えと一緒に載せています。`;
+const intro = category
+  ? category.description
+  : `${area.cityShort}・${area.nearby.map((n) => n.replace(/市$/, '')).join('・')}など${area.region}からお越しの方の参考に。写真と同じにしなくて大丈夫です。「この雰囲気で、もう少し短く」のような相談から始めましょう。`;
+const pageOf = (n: number) => (category ? workCategoryPath(category.id, n) : worksPath(n));
+// 流れる帯: カテゴリと地名。装飾（aria-hidden）
+const ticker = [...workCategories.flatMap((c) => [c.en, c.label]), area.cityShort, area.region, 'Before', 'After'];
+---
+
+<section class="page-head section--tight">
+  <div class="wrap">
+    <Breadcrumbs items={crumbs} class="page-head__crumbs" />
+    <SectionHead en={headEn} jp={headJp} level="h1" />
+  </div>
+  <div class="ticker" aria-hidden="true">
+    <div class="ticker__track">
+      {[0, 1].map(() => ticker.map((t) => <span class:list={['ticker__item', /^[A-Za-z]/.test(t) && 'ticker__item--en']}>{t}</span>))}
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="page-head__text" data-reveal>
+      <p class="page-head__lead">{lead}</p>
+      <p class="page-head__intro small muted">{intro}</p>
+    </div>
+    <nav class="cats" aria-label="カテゴリ" data-reveal>
+      <ul>
+        <li>
+          <a href="/works" class:list={['cats__link', !category && 'is-active']} aria-current={!category ? 'page' : undefined}>
+            All<span class="cats__jp">すべて <span class="num">{totalCount}</span></span>
+          </a>
+        </li>
+        {workCategories.map((c) => (
+          <li>
+            <a href={workCategoryPath(c.id)} class:list={['cats__link', category?.id === c.id && 'is-active']} aria-current={category?.id === c.id ? 'page' : undefined}>
+              {c.en}<span class="cats__jp">{c.label} <span class="num">{counts[c.id] ?? 0}</span></span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+    {hasDemo && <DemoNote text="事例の写真は素材写真によるイメージで、TRUNKの実際の施術例ではありません。ビフォーとアフターは別の人物です。" />}
+  </div>
+</section>
+
+<section class="list section--tight" aria-label="事例一覧">
+  <div class="wrap">
+    {page.data.length > 0 ? (
+      <ol class="list__grid">
+        {page.data.map((w, i) => (
+          <li class="list__item">
+            <WorkCard work={w} index={i} heading="h2" loading={i < 2 ? 'eager' : 'lazy'} sizes="(min-width: 900px) 40vw, 100vw" />
+          </li>
+        ))}
+      </ol>
+    ) : (
+      <p class="muted">このカテゴリの事例は準備中です。</p>
+    )}
+
+    {page.lastPage > 1 && (
+      <nav class="pager" aria-label="ページ送り">
+        {page.url.prev ? <a href={page.url.prev} class="link" rel="prev"><span class="arrow" aria-hidden="true">←</span>前のページ</a> : <span />}
+        <p class="pager__pos small muted"><span class="num">{page.currentPage}</span> / <span class="num">{page.lastPage}</span></p>
+        {page.url.next ? <a href={page.url.next} class="link" rel="next">次のページ<span class="arrow" aria-hidden="true">→</span></a> : <span />}
+      </nav>
+    )}
+    {page.currentPage > 1 && <p class="small muted list__top"><a href={pageOf(1)} class="link">{headJp}の最初のページへ<span class="arrow" aria-hidden="true">→</span></a></p>}
+  </div>
+</section>
+
+<section class="section--tight list-cta">
+  <div class="wrap list-cta__inner" data-reveal>
+    <p>写真と同じにしなくて大丈夫です。髪質や毎朝の手間を聞いてから、いっしょに形を決めます。</p>
+    <ReserveLink variant="btn" label="予約する" />
+  </div>
+</section>
+
+<style>
+  .page-head { padding-top: clamp(16px, 3vw, 40px); }
+  :global(.page-head__crumbs) { margin-bottom: 16px; }
+  .page-head :global(.section-head) { margin-bottom: 20px; }
+
+  /* flowing band of categories and place names — the one marquee the design allows */
+  .ticker { overflow: hidden; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding-block: 10px; margin-bottom: clamp(24px, 4vw, 40px); }
+  .ticker__track { display: flex; width: max-content; gap: 36px; animation: ticker 48s linear infinite; }
+  .ticker__item { font-size: var(--fs-label); letter-spacing: var(--ls-label); text-transform: uppercase; color: var(--ink-3); white-space: nowrap; font-weight: 500; }
+  .ticker__item--en { font-family: var(--font-display); font-size: 1.125rem; letter-spacing: 0; text-transform: none; color: var(--ink-2); font-style: italic; }
+  @keyframes ticker { to { transform: translateX(-50%); } }
+  @media (prefers-reduced-motion: reduce) { .ticker__track { animation: none; } }
+
+  .page-head__text { display: flex; flex-direction: column; gap: 10px; margin: 0 0 24px; max-width: 40em; }
+  .page-head__lead { max-width: 34em; }
+  .cats { margin-bottom: 20px; }
+  .cats ul { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+  .cats__link { display: inline-flex; align-items: baseline; gap: 6px; min-height: 40px; font-family: var(--font-display); font-size: 1.375rem; line-height: 1; }
+  .cats__link:hover, .cats__link.is-active { text-decoration: underline; text-underline-offset: 5px; }
+  .cats__link.is-active { font-style: italic; }
+  .cats__jp { font-family: var(--font-body); font-size: 0.75rem; color: var(--ink-2); }
+  .cats__jp .num { font-size: 0.875rem; }
+
+  /* Asymmetric editorial grid. SP: every third item spans the full width. PC: 5 / 3 / 4 then 4 / 5 / 3 columns
+     with different top offsets, so the eye travels instead of scanning rows. */
+  .list { padding-top: clamp(32px, 5vw, 56px); }
+  .list__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 44px 14px; }
+  .list__item:nth-child(3n + 1) { grid-column: 1 / -1; }
+  .pager { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .pager__pos { text-align: center; }
+  .list__top { margin-top: 12px; }
+  @media (min-width: 600px) { .list__grid { gap: 56px 24px; } }
+  @media (min-width: 900px) {
+    .list__grid { grid-template-columns: repeat(12, minmax(0, 1fr)); gap: clamp(64px, 7vw, 112px) clamp(20px, 2.5vw, 40px); }
+    .list__item:nth-child(3n + 1) { grid-column: auto; }
+    .list__item:nth-child(6n + 1) { grid-column: span 5; }
+    .list__item:nth-child(6n + 2) { grid-column: span 3; margin-top: clamp(64px, 8vw, 128px); }
+    .list__item:nth-child(6n + 3) { grid-column: span 4; margin-top: clamp(16px, 3vw, 48px); }
+    .list__item:nth-child(6n + 4) { grid-column: span 4; margin-top: clamp(16px, 3vw, 48px); }
+    .list__item:nth-child(6n + 5) { grid-column: span 5; }
+    .list__item:nth-child(6n + 6) { grid-column: span 3; margin-top: clamp(64px, 8vw, 128px); }
+    .list__grid { margin-bottom: 32px; }
+  }
+
+  .list-cta { border-top: 1px solid var(--line); }
+  .list-cta__inner { display: flex; flex-direction: column; gap: 20px; align-items: flex-start; }
+  .list-cta__inner p { max-width: 34em; }
+  @media (min-width: 900px) { .list-cta__inner { flex-direction: row; justify-content: space-between; align-items: center; } }
+</style>

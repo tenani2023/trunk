@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.astro/
+test-results/
+playwright-report/
+*.log
+.DS_Store
+Thumbs.db
+src/styles/fonts.css
+public/fonts/
+src/data/fonts.generated.ts
+
+# Kept locally, not in the repo (large review/verification artifacts and photo originals)
+docs/review/
+docs/screenshots/
+docs/lighthouse/
+src/assets/photos/_raw/

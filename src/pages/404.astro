@@ -1,0 +1,25 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { nav } from '@/data/site';
+---
+
+<BaseLayout title="ページが見つかりません">
+  <section class="nf section">
+    <div class="wrap">
+      <p class="label">404</p>
+      <h1 class="display nf__title">Not <em>found.</em></h1>
+      <p class="nf__lead">お探しのページは見つかりませんでした。URLが変わったか、削除された可能性があります。</p>
+      <ul class="nf__links">
+        <li><a href="/" class="link">トップへ<span class="arrow" aria-hidden="true">→</span></a></li>
+        {nav.map((n) => <li><a href={n.href} class="link">{n.label}<span class="arrow" aria-hidden="true">→</span></a></li>)}
+      </ul>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .nf { min-height: 60svh; }
+  .nf__title { font-size: clamp(3.5rem, 14vw, 8.75rem); margin: 8px 0 20px; }
+  .nf__lead { max-width: 32em; }
+  .nf__links { display: flex; flex-wrap: wrap; gap: 4px 28px; margin-top: 24px; }
+</style>

@@ -1,0 +1,276 @@
+---
+/**
+ * /works/<slug> 施術事例の詳細。検索向けのテンプレ:
+ *   パンくず（BreadcrumbList）→ カテゴリ・日付・担当 → h1 → 要約 → ビフォーアフター（ドラッグ比較）
+ *   → 施術データ（メニュー・料金目安・所要時間・お悩み・仕上がり）→ 本文（h2 で区切る）
+ *   → タグ → 担当スタイリスト＋予約 → 関連事例 → 前後の事例。Article の構造化データ付き。
+ * PC はルックブック型: 左に比較フレームが固定され、右の文章を読み進める。
+ */
+import type { GetStaticPaths } from 'astro';
+import { render } from 'astro:content';
+import { getImage } from 'astro:assets';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Breadcrumbs from '@/components/Breadcrumbs.astro';
+import CompareSlider from '@/components/CompareSlider.astro';
+import WorkCard from '@/components/WorkCard.astro';
+import Photo from '@/components/Photo.astro';
+import ReserveLink from '@/components/ReserveLink.astro';
+import DemoNote from '@/components/DemoNote.astro';
+import { getWorks, getRelatedWorks, findMenuItem, workMinutes, workPrice, formatWorkDate, isoDate } from '@/lib/works';
+import { getWorkCategory, workCategoryPath, workPath } from '@/data/works';
+import { getStaff } from '@/data/staff';
+import { formatPrice, menuStatus } from '@/data/menu';
+import { brand, area, isDemo, showDemoNotes } from '@/data/site';
+
+export const getStaticPaths = (async () => {
+  const works = await getWorks();
+  return works.map((w) => ({ params: { slug: w.id }, props: { work: w } }));
+}) satisfies GetStaticPaths;
+
+const { work } = Astro.props;
+const { data } = work;
+const { Content } = await render(work);
+const cat = getWorkCategory(data.category);
+const owner = data.staffId ? getStaff(data.staffId) : undefined;
+const related = await getRelatedWorks(work, 3);
+const all = await getWorks();
+const idx = all.findIndex((w) => w.id === work.id);
+const prev = all[idx + 1]; // 古い方
+const next = all[idx - 1]; // 新しい方
+const minutes = workMinutes(work);
+const price = workPrice(work);
+const menuRows = data.menu.map((name) => ({ name, item: findMenuItem(name) }));
+
+const title = `${data.title}｜${area.cityShort}の${cat.label}事例`;
+const description = `${data.lead} ${area.pref}${area.city}の${brand.kind} ${brand.name} の${cat.label}事例${owner ? `（担当: ${owner.name}）` : ''}。`;
+
+// Article 構造化データ。絶対URLは site 設定後に有効（未設定のデモでは相対）。
+const abs = (href: string) => (Astro.site ? new URL(href, Astro.site).href : href);
+const ogAfter = await getImage({ src: data.after, width: 1200, format: 'jpg', quality: 80 });
+const ogBefore = data.before ? await getImage({ src: data.before, width: 1200, format: 'jpg', quality: 80 }) : null;
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: data.title,
+  description: data.lead,
+  image: [abs(ogAfter.src), ...(ogBefore ? [abs(ogBefore.src)] : [])],
+  datePublished: isoDate(data.date),
+  dateModified: isoDate(data.date),
+  inLanguage: 'ja',
+  articleSection: cat.label,
+  keywords: [area.cityShort, cat.label, ...data.tags].join(','),
+  mainEntityOfPage: abs(workPath(work.id)),
+  ...(owner ? { author: { '@type': 'Person', name: owner.name, url: abs(`/staff/${owner.id}`), jobTitle: owner.role } } : {}),
+  publisher: {
+    '@type': 'HairSalon',
+    name: brand.name,
+    url: abs('/'),
+    areaServed: [area.city, ...area.nearby].map((name) => ({ '@type': 'City', name })),
+  },
+};
+const crumbs = [
+  { href: '/', label: 'トップ' },
+  { href: '/works', label: '施術事例' },
+  { href: workCategoryPath(cat.id), label: cat.label },
+  { href: workPath(work.id), label: data.title },
+];
+---
+
+<BaseLayout title={title} description={description} noindex={data.isDemo} ogImage={data.after} ogType="article">
+  {/* Article 構造化データ。デモ中は出さない（仮の名前・写真をマークアップしない）。isDemo が外れると自動で有効 */}
+  {!isDemo && <script slot="head" type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
+  <article class="work">
+    <div class="wrap work__layout">
+      <header class="work__head">
+        <Breadcrumbs items={crumbs} class="work__crumbs" />
+        <p class="label work__meta">
+          <a href={workCategoryPath(cat.id)} class="work__cat">{cat.en}</a>
+          <time datetime={isoDate(data.date)} class="work__date">{formatWorkDate(data.date)}</time>
+          {owner && <a href={`/staff/${owner.id}`} class="work__owner">{owner.name}</a>}
+        </p>
+        <h1 class="work__title h-jp">{data.title}</h1>
+      </header>
+
+      <figure class="work__visual">
+        <CompareSlider work={work} />
+        <figcaption class="caption work__cap">
+          {data.before ? '線を左右に動かして、ビフォーとアフターを比べられます。' : 'アフターのみの事例です。'}
+          {showDemoNotes && data.isDemo && ' 写真は素材写真によるイメージ（ビフォー・アフターは別の人物）で、実際の施術例ではありません。'}
+        </figcaption>
+      </figure>
+
+      <div class="work__text">
+        <p class="work__lead" data-reveal>{data.lead}</p>
+
+        <dl class="work__dl small" data-reveal>
+          {menuRows.length > 0 && (
+            <div>
+              <dt class="label">Menu</dt>
+              <dd>
+                <ul class="work__menu">
+                  {menuRows.map(({ name, item }) => (
+                    <li>
+                      <a href={`/menu#${item?.categoryId ?? cat.menuId}`} class="work__menu-link">{name}</a>
+                      {item && <span class="work__price num">{formatPrice(item)}</span>}
+                    </li>
+                  ))}
+                  {price && menuRows.length > 1 && (
+                    <li class="work__menu-total"><span>合計の目安</span><span class="work__price num">{formatPrice(price)}</span></li>
+                  )}
+                </ul>
+                {showDemoNotes && menuStatus === 'demo' && <span class="work__note">料金は仮の金額です。</span>}
+              </dd>
+            </div>
+          )}
+          {minutes && (
+            <div>
+              <dt class="label">Time</dt>
+              <dd>約 <span class="num">{minutes}</span> 分</dd>
+            </div>
+          )}
+          {data.concerns.length > 0 && (
+            <div>
+              <dt class="label">Before</dt>
+              <dd>
+                <ul class="work__concerns">{data.concerns.map((c) => <li>{c}</li>)}</ul>
+              </dd>
+            </div>
+          )}
+          {data.result && (
+            <div>
+              <dt class="label">After</dt>
+              <dd>{data.result}</dd>
+            </div>
+          )}
+          {owner && (
+            <div>
+              <dt class="label">Stylist</dt>
+              <dd><a href={`/staff/${owner.id}`} class="work__menu-link">{owner.name}</a>（{owner.role}）</dd>
+            </div>
+          )}
+        </dl>
+
+        <div class="prose" data-reveal>
+          <Content />
+        </div>
+        {data.tags.length > 0 && (
+          <ul class="work__tags small" aria-label="タグ" data-reveal>
+            <li><a href={workCategoryPath(cat.id)}>#{area.cityShort}</a></li>
+            <li><a href={workCategoryPath(cat.id)}>#{cat.label}</a></li>
+            {data.tags.map((t) => <li>#{t}</li>)}
+          </ul>
+        )}
+        {data.isDemo && <DemoNote text="デモ事例です。文章は仮で、写真は素材写真（ビフォー・アフターは別の人物）です。実際の施術例ではありません。" class="work__demo" />}
+
+        <div class="work__cta" data-reveal>
+          {owner && (
+            <a href={`/staff/${owner.id}`} class="work__stylist" aria-label={`${owner.name}のプロフィール`}>
+              <Photo id={owner.image} sizes="96px" widths={[192]} class="work__stylist-photo" alt="" />
+            </a>
+          )}
+          <div class="work__cta-text">
+            <p class="label">Reservation</p>
+            <p class="work__cta-title h-jp">{owner ? `${owner.name}に相談する` : '相談してみる'}</p>
+            <p class="small muted">写真と同じにしなくて大丈夫です。{area.cityShort}の店舗で、髪質と毎朝の手間を聞いてから形を決めます。</p>
+          </div>
+          <div class="work__cta-actions">
+            <ReserveLink variant="btn" label={owner?.nominatable ? `${owner.name}を指名して予約` : '予約する'} />
+            <a href="/menu" class="link">メニュー・料金<span class="arrow" aria-hidden="true">→</span></a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {related.length > 0 && (
+      <section class="work__related section--tight" aria-labelledby="related-title">
+        <div class="wrap">
+          <div class="work__related-head">
+            <h2 id="related-title" class="display">More <em>works.</em></h2>
+            <a href={workCategoryPath(cat.id)} class="link">{cat.label}の事例をすべて見る<span class="arrow" aria-hidden="true">→</span></a>
+          </div>
+          <ol class="work__related-grid">
+            {related.map((w, i) => (
+              <li><WorkCard work={w} index={i} sizes="(min-width: 900px) 28vw, 46vw" /></li>
+            ))}
+          </ol>
+        </div>
+      </section>
+    )}
+
+    <nav class="work__nav wrap" aria-label="前後の事例">
+      {prev ? <a href={workPath(prev.id)} class="work__nav-link"><span class="label">Prev</span><span>{prev.data.title}</span></a> : <span />}
+      {next ? <a href={workPath(next.id)} class="work__nav-link work__nav-link--next"><span class="label">Next</span><span>{next.data.title}</span></a> : <span />}
+    </nav>
+  </article>
+</BaseLayout>
+
+<style>
+  .work__layout { display: grid; grid-template-columns: 1fr; row-gap: 20px; padding-top: clamp(12px, 3vw, 40px); }
+  .work__head { display: flex; flex-direction: column; gap: 10px; }
+  :global(.work__crumbs) { margin-bottom: 4px; }
+  .work__meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+  .work__cat:hover, .work__owner:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .work__date { font-family: var(--font-display); font-size: 0.9375rem; letter-spacing: 0.02em; text-transform: none; color: var(--ink-3); }
+  .work__owner { text-transform: none; letter-spacing: 0.06em; }
+  .work__title { font-size: clamp(1.375rem, 4.6vw, 2.125rem); max-width: 24em; }
+
+  /* SP: the compare frame bleeds to both edges */
+  .work__visual { margin-inline: calc(var(--gutter) * -1); }
+  .work__cap { padding-inline: var(--gutter); }
+
+  .work__text { display: flex; flex-direction: column; gap: 24px; padding-top: 8px; }
+  .work__lead { max-width: 36em; font-size: 1.0625rem; }
+  .work__dl { display: grid; gap: 14px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .work__dl dd { margin-top: 2px; }
+  .work__menu { display: flex; flex-direction: column; gap: 2px; }
+  .work__menu li { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+  .work__menu-total { margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--line); color: var(--ink-2); }
+  .work__menu-link { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line-strong); }
+  .work__menu-link:hover { text-decoration-color: currentColor; }
+  .work__price { white-space: nowrap; }
+  .work__note { display: block; margin-top: 4px; font-size: 0.75rem; color: var(--ink-3); }
+  .work__concerns li::before { content: '— '; color: var(--ink-3); }
+
+  .prose { display: flex; flex-direction: column; gap: 12px; max-width: 36em; }
+  .prose :global(h2) { font-family: var(--font-body); font-weight: 500; font-feature-settings: 'palt' 1; letter-spacing: 0.02em; line-height: 1.5; font-size: 1.0625rem; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .prose :global(h2:first-child) { margin-top: 0; padding-top: 0; border-top: 0; }
+  .prose :global(ul) { padding-left: 1.2em; list-style: disc; }
+  .work__tags { display: flex; flex-wrap: wrap; gap: 4px 14px; color: var(--ink-2); }
+  .work__tags a:hover { text-decoration: underline; text-underline-offset: 3px; }
+  :global(.work__demo) { max-width: 36em; }
+
+  .work__cta { display: grid; grid-template-columns: auto 1fr; gap: 16px 20px; align-items: center; padding-top: 24px; border-top: 1px solid var(--line); }
+  .work__stylist { display: block; width: 64px; }
+  :global(.work__stylist-photo) { --ratio: 1 / 1 !important; border-radius: 50%; }
+  .work__cta-text { display: flex; flex-direction: column; gap: 4px; }
+  .work__cta-title { font-size: 1.25rem; }
+  .work__cta-actions { grid-column: 1 / -1; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+
+  .work__related { border-top: 1px solid var(--line); margin-top: clamp(40px, 6vw, 80px); }
+  .work__related-head { display: flex; flex-direction: column; gap: 4px; margin-bottom: 24px; }
+  .work__related-head .display { font-size: clamp(2rem, 6vw, 3.5rem); }
+  .work__related-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 12px; }
+
+  .work__nav { display: flex; justify-content: space-between; gap: 24px; border-top: 1px solid var(--line); padding-block: 20px 40px; }
+  .work__nav-link { display: flex; flex-direction: column; gap: 2px; min-height: 44px; justify-content: center; max-width: 48%; font-size: 0.875rem; }
+  .work__nav-link--next { text-align: right; align-items: flex-end; margin-left: auto; }
+  .work__nav-link:hover span:last-child { text-decoration: underline; text-underline-offset: 4px; }
+
+  /* PC: lookbook. Frame stays on the left while the text column scrolls. */
+  @media (min-width: 900px) {
+    .work__layout { grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: clamp(12px, 2vw, 32px); row-gap: 0; align-items: start; }
+    .work__head { grid-column: 1 / -1; gap: 12px; padding-bottom: clamp(24px, 3vw, 40px); }
+      .work__visual { grid-column: 1 / span 7; margin-inline: 0; position: sticky; top: calc(var(--header-h) + 24px); }
+    .work__cap { padding-inline: 0; }
+    .work__text { grid-column: 9 / -1; padding-top: 0; padding-bottom: 32px; gap: 28px; }
+    .work__cta { grid-template-columns: auto 1fr; }
+    .work__stylist { width: 72px; }
+    .work__related-head { flex-direction: row; justify-content: space-between; align-items: flex-end; margin-bottom: 32px; }
+    .work__related-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 48px clamp(24px, 3vw, 48px); }
+    .work__nav-link { font-size: 0.9375rem; }
+  }
+  @media (min-width: 1280px) {
+    .work__visual { grid-column: 1 / span 6; }
+    .work__text { grid-column: 8 / -1; }
+  }
+</style>

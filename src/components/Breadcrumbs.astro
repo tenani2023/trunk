@@ -1,0 +1,43 @@
+---
+/**
+ * パンくず。表示と、構造化データ（BreadcrumbList）を同時に出す。
+ * 絶対URLは astro.config の `site` が設定されているときだけ（未設定のデモでは相対のまま）。
+ */
+import { isDemo } from '@/data/site';
+
+interface Crumb {
+  href: string;
+  label: string;
+}
+interface Props {
+  items: Crumb[];
+  class?: string;
+}
+const { items, class: className = '' } = Astro.props;
+const abs = (href: string) => (Astro.site ? new URL(href, Astro.site).href : href);
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: items.map((c, i) => ({ '@type': 'ListItem', position: i + 1, name: c.label, item: abs(c.href) })),
+};
+---
+
+<nav class:list={['crumbs', className]} aria-label="パンくず">
+  <ol class="crumbs__list small">
+    {items.map((c, i) => (
+      <li class="crumbs__item">
+        {i < items.length - 1 ? <a href={c.href} class="crumbs__link">{c.label}</a> : <span aria-current="page">{c.label}</span>}
+      </li>
+    ))}
+  </ol>
+</nav>
+{/* 構造化データはデモ中は出さない（仮の名前・写真をマークアップしない）。isDemo が外れると自動で有効 */}
+{!isDemo && <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
+
+<style>
+  .crumbs__list { display: flex; flex-wrap: wrap; gap: 2px 0; color: var(--ink-2); font-size: 0.75rem; }
+  .crumbs__item { display: inline-flex; align-items: center; min-height: 28px; }
+  .crumbs__item + .crumbs__item::before { content: '/'; margin-inline: 8px; color: var(--ink-3); }
+  .crumbs__link:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .crumbs__item span { color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60vw; }
+</style>

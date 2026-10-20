@@ -1,0 +1,94 @@
+---
+import Logo from './Logo.astro';
+import ReserveLink from './ReserveLink.astro';
+import { brand, nav, location, hours, contact, showDemoNotes } from '@/data/site';
+---
+
+<footer class="footer on-ink" id="footer">
+  <div class="wrap">
+    <div class="footer__top">
+      <div class="footer__brand" data-reveal>
+        <Logo size="clamp(4.5rem, 16vw, 10.5rem)" />
+        <p class="footer__kind label">Hair salon — {brand.kind}</p>
+      </div>
+      <div class="footer__reserve" data-reveal>
+        <p class="footer__lead">ご予約はこちらから。<br />ご相談だけのご来店も歓迎です。</p>
+        <ReserveLink variant="btn" label="予約する" />
+      </div>
+    </div>
+
+    <hr class="rule" />
+
+    <div class="footer__mid">
+      <nav aria-label="フッターナビゲーション" id="footer-nav" class="footer__nav">
+        <ul>
+          <li><a href="/">トップ</a></li>
+          {nav.map((n) => <li><a href={n.href}>{n.label}</a></li>)}
+        </ul>
+      </nav>
+
+      <address class="footer__info small">
+        <div class="footer__col">
+          <p class="label">Salon</p>
+          <p>{location.postal.value}<br />{location.address.value}</p>
+          <p>{location.access.value}</p>
+        </div>
+        <div class="footer__col">
+          <p class="label">Hours</p>
+          <p>平日 {hours.weekdays.value} ／ 土日祝 {hours.weekends.value}<br />定休日 {hours.closed.value}</p>
+          <p class="label">Tel</p>
+          <p>{contact.phoneDisplay.value}</p>
+        </div>
+      </address>
+    </div>
+
+    <div class="footer__bottom small">
+      <p>© {brand.name}</p>
+      {showDemoNotes && (
+        <p class="footer__demo">
+          <span class="demo-tag">DEMO</span>
+          このサイトはデモです。住所・営業時間・電話・料金・スタッフ・写真はすべて仮のもので、実在の店舗情報ではありません。
+        </p>
+      )}
+    </div>
+  </div>
+</footer>
+
+<style>
+  .footer { padding-block: clamp(56px, 8vw, 104px) clamp(28px, 4vw, 48px); }
+  .footer__top {
+    display: flex; flex-direction: column; gap: 32px;
+    padding-bottom: clamp(32px, 5vw, 64px);
+  }
+  .footer__brand { display: flex; flex-direction: column; gap: 12px; }
+  .footer__kind { margin-left: 2px; }
+  .footer__reserve { display: flex; flex-direction: column; gap: 18px; align-items: flex-start; }
+  .footer__lead { font-size: 0.9375rem; line-height: 1.9; }
+
+  .footer__mid {
+    display: grid; grid-template-columns: 1fr; gap: 32px;
+    padding-block: clamp(32px, 5vw, 56px);
+  }
+  .footer__nav ul { display: flex; flex-direction: column; gap: 2px; }
+  .footer__nav a { display: inline-flex; align-items: center; min-height: 40px; font-size: 0.9375rem; letter-spacing: 0.04em; }
+  .footer__nav a:hover { text-decoration: underline; text-underline-offset: 4px; }
+  .footer__info { display: flex; flex-direction: column; gap: 16px; color: var(--on-ink); }
+  .footer__col { display: flex; flex-direction: column; gap: 4px; }
+  .footer__col .label { margin-top: 12px; }
+  .footer__col .label:first-child { margin-top: 0; }
+
+  .footer__bottom {
+    display: flex; flex-direction: column; gap: 10px;
+    padding-top: 20px; border-top: 1px solid var(--line-on-ink);
+    color: var(--on-ink-2);
+  }
+  .footer__demo { display: flex; gap: 8px; align-items: flex-start; max-width: 56em; }
+  .footer__demo .demo-tag { flex: none; margin-top: 4px; }
+
+  @media (min-width: 900px) {
+    .footer__top { flex-direction: row; justify-content: space-between; align-items: flex-end; }
+    .footer__mid { grid-template-columns: 1fr 1fr 1fr; }
+    .footer__info { grid-column: 2 / span 2; display: grid; grid-template-columns: 1fr 1fr; column-gap: 32px; align-items: start; }
+    .footer__bottom { flex-direction: row; justify-content: space-between; align-items: flex-start; }
+  }
+</style>

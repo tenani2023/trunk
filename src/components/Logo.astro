@@ -1,0 +1,35 @@
+---
+/**
+ * 仮ロゴ（タイポグラフィのワードマーク）。
+ * 正式ロゴが届いたら、このコンポーネントの中身だけを SVG に置き換える。
+ * 使用箇所はサイズ用の `size` を渡すだけで、レイアウト側の変更は不要。
+ */
+import { brand } from '@/data/site';
+
+interface Props {
+  /** ワードマークの font-size（CSS 長さ） */
+  size?: string;
+  as?: 'span' | 'h1' | 'div';
+  class?: string;
+}
+const { size = '22px', as: Tag = 'span', class: className = '' } = Astro.props;
+---
+
+<Tag class:list={['logo', className]} style={`--logo-size:${size}`}>
+  <span class="logo__word">{brand.name}</span>
+</Tag>
+
+<style>
+  .logo {
+    display: inline-block;
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: var(--logo-size);
+    line-height: 0.85;
+    letter-spacing: -0.02em;
+    color: inherit;
+    /* 数字の1やRの脚を含めた光学的な左揃え */
+    margin-left: -0.03em;
+  }
+  .logo__word { display: inline-block; }
+</style>

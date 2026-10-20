@@ -1,0 +1,158 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Photo from '@/components/Photo.astro';
+import SectionHead from '@/components/SectionHead.astro';
+import DemoNote from '@/components/DemoNote.astro';
+import ReserveLink from '@/components/ReserveLink.astro';
+import { brand, location, hours, contact } from '@/data/site';
+---
+
+<BaseLayout title="サロン・アクセス" description="TRUNKの店舗情報とアクセス。住所、営業時間、定休日、支払い方法。（デモ・仮情報）">
+  <section class="page-head section--tight">
+    <div class="wrap">
+      <SectionHead en="Salon" jp="サロン・アクセス" level="h1" />
+      <p class="page-head__lead" data-reveal>4席の小さな店です。窓からの光と、植物と、静かな音楽。長居できる場所でありたいと思っています。</p>
+    </div>
+  </section>
+
+  <section class="gallery">
+    <div class="wrap grid">
+      <figure class="gallery__a" data-reveal><Photo id="salonMainWide" sizes="(min-width: 900px) 62vw, 100vw" loading="eager" fetchpriority="high" /></figure>
+      <figure class="gallery__b" data-reveal style="--reveal-delay:.1s"><Photo id="salonProducts" sizes="(min-width: 900px) 24vw, 50vw" /></figure>
+      <figure class="gallery__c" data-reveal style="--reveal-delay:.15s"><Photo id="salonDetail" sizes="(min-width: 900px) 30vw, 60vw" /></figure>
+      <div class="gallery__note"><DemoNote text="店舗写真はイメージ（素材写真）で、実店舗ではありません。実店舗の写真に差し替える前提です。" /></div>
+    </div>
+  </section>
+
+  <section class="info section--tight" aria-labelledby="info-title">
+    <div class="wrap grid">
+      <div class="info__head">
+        <h2 id="info-title" class="display">Information</h2>
+        <p class="h-jp small muted">店舗情報</p>
+      </div>
+      <dl class="info__list">
+        <div class="info__row">
+          <dt class="label">Name</dt>
+          <dd>{brand.name}（{brand.kind}）</dd>
+        </div>
+        <div class="info__row">
+          <dt class="label">Address</dt>
+          <dd>
+            {location.postal.value}<br />{location.address.value}
+            {location.address.status === 'demo' && <span class="demo-tag info__tag">仮</span>}
+          </dd>
+        </div>
+        <div class="info__row">
+          <dt class="label">Access</dt>
+          <dd>{location.access.value}{location.access.status === 'demo' && <span class="demo-tag info__tag">仮</span>}</dd>
+        </div>
+        <div class="info__row">
+          <dt class="label">Hours</dt>
+          <dd>
+            平日 {hours.weekdays.value}<br />土日祝 {hours.weekends.value}<br />
+            <span class="small muted">最終受付: {hours.lastEntry.value}</span>
+            {hours.weekdays.status === 'demo' && <span class="demo-tag info__tag">仮</span>}
+          </dd>
+        </div>
+        <div class="info__row">
+          <dt class="label">Closed</dt>
+          <dd>{hours.closed.value}{hours.closed.status === 'demo' && <span class="demo-tag info__tag">仮</span>}</dd>
+        </div>
+        <div class="info__row">
+          <dt class="label">Tel</dt>
+          <dd>
+            {contact.phone ? <a href={`tel:${contact.phone}`}>{contact.phoneDisplay.value}</a> : contact.phoneDisplay.value}
+            <br /><span class="small muted">施術中は電話に出られないことがあります。ご予約はオンラインが確実です。</span>
+          </dd>
+        </div>
+        <div class="info__row">
+          <dt class="label">Payment</dt>
+          <dd>{contact.payment.value.join('、')}{contact.payment.status === 'demo' && <span class="demo-tag info__tag">仮</span>}</dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="map section--tight" aria-labelledby="map-title">
+    <div class="wrap grid">
+      <div class="map__head">
+        <h2 id="map-title" class="display">Map</h2>
+        <p class="h-jp small muted">地図</p>
+      </div>
+      <div class="map__body">
+        {location.mapUrl ? (
+          <a href={location.mapUrl} class="btn btn--ghost" target="_blank" rel="noopener">地図アプリで開く</a>
+        ) : (
+          <div class="map__placeholder" role="note">
+            <p class="label">Map — 準備中</p>
+            <p class="small muted">住所が確定したら、ここに地図へのリンクが入ります。未確定の住所から地図は生成していません。</p>
+          </div>
+        )}
+        <p class="small muted map__hint">{location.access.value}。詳しい道順は住所確定後にご案内します。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section--tight salon-cta">
+    <div class="wrap salon-cta__inner" data-reveal>
+      <p>はじめての方は、店の雰囲気を見るだけでも歓迎です。</p>
+      <ReserveLink variant="btn" label="予約する" />
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .page-head { padding-top: clamp(28px, 4vw, 56px); }
+  .page-head__lead { max-width: 34em; margin-top: -8px; }
+
+  .gallery .grid { row-gap: 12px; }
+  .gallery__a { grid-column: 1 / -1; margin-inline: calc(var(--gutter) * -1); }
+  .gallery__b { grid-column: 1 / span 6; }
+  .gallery__c { grid-column: 6 / -1; margin-top: 40px; }
+  .gallery__note { grid-column: 1 / -1; margin-top: 8px; }
+  @media (min-width: 900px) {
+    .gallery .grid { row-gap: 0; align-items: start; }
+    .gallery__a { grid-column: 1 / span 8; grid-row: 1; margin-inline: 0; }
+    .gallery__b { grid-column: 10 / -1; grid-row: 1; margin-top: clamp(60px, 8vw, 120px); align-self: start; }
+    .gallery__c { grid-column: 4 / span 4; grid-row: 2; margin-top: 24px; }
+    .gallery__note { grid-column: 9 / -1; grid-row: 2; margin-top: 24px; align-self: end; }
+  }
+
+  .info { border-top: 1px solid var(--line); margin-top: 32px; }
+  .info .grid { row-gap: 16px; }
+  .info__head { grid-column: 1 / -1; }
+  .info__head .display { font-size: clamp(2.25rem, 6vw, 3.5rem); }
+  .info__list { grid-column: 1 / -1; border-top: 1px solid var(--line); }
+  .info__row { display: grid; grid-template-columns: 1fr; gap: 4px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .info__row dd { font-size: 0.9688rem; }
+  .info__tag { margin-left: 8px; }
+  @media (min-width: 900px) {
+    .info .grid { row-gap: 0; align-items: start; }
+    .info__head { grid-column: 1 / span 4; position: sticky; top: calc(var(--header-h) + 24px); }
+    .info__list { grid-column: 6 / -1; }
+    .info__row { grid-template-columns: 140px 1fr; gap: 24px; padding: 18px 0; }
+    .info__row dd { font-size: 1rem; }
+  }
+
+  .map { border-top: 1px solid var(--line); }
+  .map .grid { row-gap: 16px; }
+  .map__head { grid-column: 1 / -1; }
+  .map__head .display { font-size: clamp(2.25rem, 6vw, 3.5rem); }
+  .map__body { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 12px; }
+  .map__placeholder {
+    aspect-ratio: 16 / 9; max-height: 320px;
+    border: 1px dashed var(--line-strong); border-radius: var(--radius);
+    display: flex; flex-direction: column; justify-content: center; gap: 6px;
+    padding: 24px;
+  }
+  .map__placeholder .small { max-width: 30em; }
+  @media (min-width: 900px) {
+    .map .grid { row-gap: 0; }
+    .map__head { grid-column: 1 / span 4; }
+    .map__body { grid-column: 6 / -1; }
+  }
+
+  .salon-cta { border-top: 1px solid var(--line); }
+  .salon-cta__inner { display: flex; flex-direction: column; gap: 20px; align-items: flex-start; }
+  @media (min-width: 900px) { .salon-cta__inner { flex-direction: row; justify-content: space-between; align-items: center; } }
+</style>

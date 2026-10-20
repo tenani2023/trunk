@@ -1,0 +1,54 @@
+---
+/**
+ * media.ts のキーから最適化済み <picture> を描画する。
+ * 枠の比率（aspect-ratio）と焦点（object-position）はデータから受け取り、
+ * スマホ／PCで別の焦点を CSS 変数で切り替える。
+ */
+import { Picture } from 'astro:assets';
+import { media, type MediaKey } from '@/data/media';
+
+interface Props {
+  id: MediaKey;
+  /** 画面幅に対する表示幅。srcset 選択に使う（例: "(min-width: 900px) 33vw, 50vw"） */
+  sizes: string;
+  /** 枠の比率を上書き（既定は media の ratio） */
+  ratio?: string;
+  loading?: 'lazy' | 'eager';
+  fetchpriority?: 'high' | 'low' | 'auto';
+  /** 生成する最大幅 */
+  widths?: number[];
+  class?: string;
+  /** alt を上書き（装飾的に使う場合は "" を渡す） */
+  alt?: string;
+}
+
+const {
+  id,
+  sizes,
+  ratio,
+  loading = 'lazy',
+  fetchpriority = 'auto',
+  widths = [360, 540, 720, 960, 1280],
+  class: className = '',
+  alt,
+} = Astro.props;
+
+const item = media[id];
+const style = `--ratio:${ratio ?? item.ratio};--focus-m:${item.focus.mobile};--focus-d:${item.focus.desktop}`;
+---
+
+<div class:list={['photo', className]} style={style} data-media={id} data-status={item.status}>
+  <Picture
+    src={item.src}
+    alt={alt ?? item.alt}
+    widths={widths.filter((w) => w <= item.src.width)}
+    sizes={sizes}
+    formats={['avif', 'webp']}
+    fallbackFormat="jpg"
+    quality={78}
+    loading={loading}
+    decoding={loading === 'eager' ? 'sync' : 'async'}
+    fetchpriority={fetchpriority}
+    layout="none"
+  />
+</div>

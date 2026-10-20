@@ -1,0 +1,80 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import SectionHead from '@/components/SectionHead.astro';
+import StyleCard from '@/components/StyleCard.astro';
+import DemoNote from '@/components/DemoNote.astro';
+import ReserveLink from '@/components/ReserveLink.astro';
+import { styles, styleCategories } from '@/data/styles';
+
+const groups = styleCategories
+  .map((c) => ({ ...c, items: styles.filter((s) => s.category === c.id) }))
+  .filter((g) => g.items.length > 0);
+---
+
+<BaseLayout title="スタイル" description="TRUNKのヘアスタイル一覧。ショート、ボブ、ミディアム、ロング、メンズ、パーマ、カラー。（デモ）">
+  <section class="page-head section--tight">
+    <div class="wrap">
+      <SectionHead en="Styles" jp="スタイル" level="h1" />
+      <p class="page-head__lead" data-reveal>長さと質感で分けています。気になるものがあれば、担当の名前をたどってみてください。</p>
+      <nav class="cats" aria-label="カテゴリ" data-reveal>
+        <ul>
+          {groups.map((g) => (
+            <li><a href={`#cat-${g.id.replace(/[^a-z]/gi, '').toLowerCase()}`} class="cats__link">{g.id}<span class="cats__jp">{g.label}</span></a></li>
+          ))}
+        </ul>
+      </nav>
+      <DemoNote text="写真はすべて素材写真によるイメージで、TRUNKの実際の施術例ではありません。" />
+    </div>
+  </section>
+
+  {groups.map((g) => (
+    <section class="cat section--tight" id={`cat-${g.id.replace(/[^a-z]/gi, '').toLowerCase()}`} aria-labelledby={`cat-title-${g.id.replace(/[^a-z]/gi, '').toLowerCase()}`}>
+      <div class="wrap grid">
+        <div class="cat__head">
+          <h2 class="display cat__en" id={`cat-title-${g.id.replace(/[^a-z]/gi, '').toLowerCase()}`}>{g.id}</h2>
+          <p class="h-jp small muted">{g.label}<span class="cat__count num">{g.items.length}</span></p>
+        </div>
+        <ol class="cat__grid">
+          {g.items.map((s, i) => (
+            <li><StyleCard style={s} index={i} loading={g === groups[0] && i < 2 ? 'eager' : 'lazy'} sizes="(min-width: 900px) 24vw, 46vw" /></li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  ))}
+
+  <section class="section--tight styles-cta">
+    <div class="wrap styles-cta__inner" data-reveal>
+      <p>写真と同じにしなくて大丈夫です。「この雰囲気で、もう少し短く」のような相談から始めましょう。</p>
+      <ReserveLink variant="btn" label="予約する" />
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .page-head { padding-top: clamp(28px, 4vw, 56px); }
+  .page-head__lead { max-width: 34em; margin: -8px 0 24px; }
+  .cats { margin-bottom: 20px; }
+  .cats ul { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+  .cats__link { display: inline-flex; align-items: baseline; gap: 6px; min-height: 40px; font-family: var(--font-display); font-size: 1.375rem; line-height: 1; }
+  .cats__link:hover { text-decoration: underline; text-underline-offset: 5px; }
+  .cats__jp { font-family: var(--font-body); font-size: 0.75rem; color: var(--ink-2); }
+
+  .cat { border-top: 1px solid var(--line); }
+  .cat .grid { row-gap: 20px; }
+  .cat__head { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 16px; }
+  .cat__en { font-size: clamp(2.25rem, 6vw, 3.5rem); }
+  .cat__count { margin-left: 8px; }
+  .cat__grid { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 12px; }
+  @media (min-width: 600px) { .cat__grid { gap: 32px 24px; } }
+  @media (min-width: 900px) {
+    .cat .grid { row-gap: 0; }
+    .cat__head { grid-column: 1 / span 3; flex-direction: column; gap: 4px; position: sticky; top: calc(var(--header-h) + 24px); align-self: start; }
+    .cat__grid { grid-column: 4 / -1; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 48px clamp(20px, 2.5vw, 40px); }
+  }
+
+  .styles-cta { border-top: 1px solid var(--line); }
+  .styles-cta__inner { display: flex; flex-direction: column; gap: 20px; align-items: flex-start; }
+  .styles-cta__inner p { max-width: 34em; }
+  @media (min-width: 900px) { .styles-cta__inner { flex-direction: row; justify-content: space-between; align-items: center; } }
+</style>
